@@ -200,7 +200,12 @@ function createHtmlLabel(label) {
       ? '0 0 8px rgba(255,200,90,.7)'
       : '0 0 7px rgba(75,170,255,.55)';
   el.style.transform = 'translate(-50%, -115%)';
+  el.style.transition = 'opacity .12s linear';
   return el;
+}
+
+function setHtmlLabelVisibility(el, isVisible) {
+  el.style.opacity = isVisible ? '1' : '0';
 }
 
 function toUnit(lat, lng) {
@@ -230,8 +235,8 @@ function buildRoutePath(arc) {
   const maxAlt = arc.hub ? 0.36 : 0.28;
   const points = [];
 
-  for (let i = 0; i <= 72; i += 1) {
-    const t = i / 72;
+  for (let i = 0; i <= 96; i += 1) {
+    const t = i / 96;
     let vector;
     if (Math.abs(sinOmega) < 1e-6) {
       vector = start.clone().lerp(end, t).normalize();
@@ -241,10 +246,7 @@ function buildRoutePath(arc) {
       vector = start.clone().multiplyScalar(a).add(end.clone().multiplyScalar(b)).normalize();
     }
     const pos = fromUnit(vector);
-    points.push({
-      ...pos,
-      alt: Math.sin(Math.PI * t) * maxAlt * 0.985,
-    });
+    points.push({ ...pos, alt: Math.sin(Math.PI * t) * maxAlt });
   }
   return points;
 }
@@ -360,16 +362,16 @@ export default function App() {
           showGraticules={false}
 
           polygonsData={geojson.features}
-          polygonCapColor={(d) => isTurkeyFeature(d) ? 'rgba(190,31,58,.88)' : 'rgba(87,118,148,.18)'}
-          polygonSideColor={(d) => isTurkeyFeature(d) ? 'rgba(92,7,24,.88)' : 'rgba(12,25,38,.72)'}
-          polygonStrokeColor={(d) => isTurkeyFeature(d) ? 'rgba(255,118,139,.98)' : 'rgba(181,212,235,.36)'}
-          polygonAltitude={(d) => isTurkeyFeature(d) ? 0.014 : 0.0025}
-          polygonTransitionDuration={220}
+          polygonCapColor={(d) => isTurkeyFeature(d) ? 'rgba(190,31,58,.88)' : 'rgba(87,118,148,.12)'}
+          polygonSideColor={(d) => isTurkeyFeature(d) ? 'rgba(92,7,24,.84)' : 'rgba(12,25,38,.38)'}
+          polygonStrokeColor={(d) => isTurkeyFeature(d) ? 'rgba(255,118,139,.98)' : 'rgba(181,212,235,.30)'}
+          polygonAltitude={(d) => isTurkeyFeature(d) ? 0.012 : 0.0012}
+          polygonTransitionDuration={0}
 
           pointsData={visibleNodes}
           pointLat="lat"
           pointLng="lng"
-          pointAltitude={0.006}
+          pointAltitude={0.005}
           pointRadius={(d) => (d.target ? 0.24 : d.hub ? 0.17 : 0.070) * nodeScale}
           pointColor={(d) => d.target ? '#ff3455' : d.hub ? '#ffc85a' : '#55ffad'}
           pointsMerge={false}
@@ -377,7 +379,7 @@ export default function App() {
           ringsData={hubs}
           ringLat="lat"
           ringLng="lng"
-          ringAltitude={0.008}
+          ringAltitude={0.007}
           ringColor={(d) => () => d.target ? '#ff3858' : '#ffd06d'}
           ringMaxRadius={(d) => (d.target ? 2.5 : 1.55) * nodeScale}
           ringPropagationSpeed={(d) => d.target ? 0.55 : 0.40}
@@ -388,10 +390,10 @@ export default function App() {
           pathPointLat="lat"
           pathPointLng="lng"
           pathPointAlt="alt"
-          pathColor={(d) => d.hub ? 'rgba(255,208,106,.52)' : 'rgba(78,169,255,.46)'}
-          pathStroke={(d) => d.hub ? 0.24 : 0.14}
-          pathDashLength={(d) => d.hub ? 0.055 : 0.040}
-          pathDashGap={(d) => d.hub ? 0.030 : 0.026}
+          pathColor={(d) => d.hub ? 'rgba(255,211,122,.68)' : 'rgba(78,169,255,.58)'}
+          pathStroke={(d) => d.hub ? 0.20 : 0.12}
+          pathDashLength={1}
+          pathDashGap={0}
           pathDashAnimateTime={0}
           pathTransitionDuration={0}
 
@@ -400,20 +402,21 @@ export default function App() {
           arcStartLng={(d) => d.from.lng}
           arcEndLat={(d) => d.to.lat}
           arcEndLng={(d) => d.to.lng}
-          arcColor={(d) => d.hub ? ['#fff1ba', '#7bc8ff'] : ['#d9f3ff', '#65c1ff']}
+          arcColor={(d) => d.hub ? ['#fff3bd', '#87d1ff'] : ['#e5f7ff', '#69c4ff']}
           arcAltitude={(d) => d.hub ? 0.36 : 0.28}
           arcStroke={(d) => d.hub ? 0.34 : 0.23}
-          arcDashLength={(d) => d.hub ? 0.045 : 0.032}
-          arcDashGap={(d) => d.hub ? 0.46 : 0.52}
-          arcDashInitialGap={(d) => (d.index * 0.127) % 1}
-          arcDashAnimateTime={(d) => d.hub ? 6200 : 8200}
+          arcDashLength={(d) => d.hub ? 0.026 : 0.018}
+          arcDashGap={(d) => d.hub ? 0.974 : 0.982}
+          arcDashInitialGap={(d) => (d.index * 0.137) % 1}
+          arcDashAnimateTime={(d) => d.hub ? 6500 : 8600}
           arcsTransitionDuration={0}
 
           htmlElementsData={htmlLabels}
           htmlLat="lat"
           htmlLng="lng"
-          htmlAltitude={0.026}
+          htmlAltitude={0.022}
           htmlElement={createHtmlLabel}
+          htmlElementVisibilityModifier={setHtmlLabelVisibility}
           htmlTransitionDuration={0}
         />
       </div>
