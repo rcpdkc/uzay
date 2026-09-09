@@ -203,6 +203,52 @@ function createHtmlLabel(label) {
   return el;
 }
 
+function toUnit(lat, lng) {
+  const phi = THREE.MathUtils.degToRad(lat);
+  const lambda = THREE.MathUtils.degToRad(lng);
+  return new THREE.Vector3(
+    Math.cos(phi) * Math.cos(lambda),
+    Math.sin(phi),
+    Math.cos(phi) * Math.sin(lambda),
+  );
+}
+
+function fromUnit(vector) {
+  const v = vector.clone().normalize();
+  return {
+    lat: THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(v.y, -1, 1))),
+    lng: THREE.MathUtils.radToDeg(Math.atan2(v.z, v.x)),
+  };
+}
+
+function buildRoutePath(arc) {
+  const start = toUnit(arc.from.lat, arc.from.lng);
+  const end = toUnit(arc.to.lat, arc.to.lng);
+  const dot = THREE.MathUtils.clamp(start.dot(end), -1, 1);
+  const omega = Math.acos(dot);
+  const sinOmega = Math.sin(omega);
+  const maxAlt = arc.hub ? 0.36 : 0.28;
+  const points = [];
+
+  for (let i = 0; i <= 72; i += 1) {
+    const t = i / 72;
+    let vector;
+    if (Math.abs(sinOmega) < 1e-6) {
+      vector = start.clone().lerp(end, t).normalize();
+    } else {
+      const a = Math.sin((1 - t) * omega) / sinOmega;
+      const b = Math.sin(t * omega) / sinOmega;
+      vector = start.clone().multiplyScalar(a).add(end.clone().multiplyScalar(b)).normalize();
+    }
+    const pos = fromUnit(vector);
+    points.push({
+      ...pos,
+      alt: Math.sin(Math.PI * t) * maxAlt * 0.985,
+    });
+  }
+  return points;
+}
+
 export default function App() {
   const globeRef = useRef();
   const { width, height } = useWindowSize();
@@ -241,6 +287,11 @@ export default function App() {
     hub: Boolean(node.hub),
     index,
   })), [flowNodes]);
+
+  const fixedRoutes = useMemo(() => arcs.map((arc) => ({
+    ...arc,
+    points: buildRoutePath(arc),
+  })), [arcs]);
 
   const hubs = useMemo(() => visibleNodes.filter((node) => node.hub || node.target), [visibleNodes]);
   const htmlLabels = useMemo(() => {
@@ -332,18 +383,30 @@ export default function App() {
           ringPropagationSpeed={(d) => d.target ? 0.55 : 0.40}
           ringRepeatPeriod={(d) => d.target ? 1800 : 2400}
 
+          pathsData={fixedRoutes}
+          pathPoints="points"
+          pathPointLat="lat"
+          pathPointLng="lng"
+          pathPointAlt="alt"
+          pathColor={(d) => d.hub ? 'rgba(255,208,106,.52)' : 'rgba(78,169,255,.46)'}
+          pathStroke={(d) => d.hub ? 0.24 : 0.14}
+          pathDashLength={(d) => d.hub ? 0.055 : 0.040}
+          pathDashGap={(d) => d.hub ? 0.030 : 0.026}
+          pathDashAnimateTime={0}
+          pathTransitionDuration={0}
+
           arcsData={arcs}
           arcStartLat={(d) => d.from.lat}
           arcStartLng={(d) => d.from.lng}
           arcEndLat={(d) => d.to.lat}
           arcEndLng={(d) => d.to.lng}
-          arcColor={(d) => d.hub ? ['#ffd06a', '#7bc8ff'] : ['#42a9ff', '#b8ecff']}
-          arcAltitudeAutoScale={(d) => d.hub ? 0.36 : 0.28}
-          arcStroke={(d) => d.hub ? 0.30 : 0.18}
-          arcDashLength={(d) => d.hub ? 0.14 : 0.075}
-          arcDashGap={(d) => d.hub ? 0.18 : 0.16}
-          arcDashInitialGap={(d) => (d.index * 0.113) % 1}
-          arcDashAnimateTime={(d) => d.hub ? 5800 : 7600}
+          arcColor={(d) => d.hub ? ['#fff1ba', '#7bc8ff'] : ['#d9f3ff', '#65c1ff']}
+          arcAltitude={(d) => d.hub ? 0.36 : 0.28}
+          arcStroke={(d) => d.hub ? 0.34 : 0.23}
+          arcDashLength={(d) => d.hub ? 0.045 : 0.032}
+          arcDashGap={(d) => d.hub ? 0.46 : 0.52}
+          arcDashInitialGap={(d) => (d.index * 0.127) % 1}
+          arcDashAnimateTime={(d) => d.hub ? 6200 : 8200}
           arcsTransitionDuration={0}
 
           htmlElementsData={htmlLabels}
