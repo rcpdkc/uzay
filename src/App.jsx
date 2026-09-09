@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Globe from 'react-globe.gl';
+import * as THREE from 'three';
 
 const WORLD_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
-const EARTH_IMG = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
-const EARTH_BUMP = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
 const SPACE_IMG = 'https://unpkg.com/three-globe/example/img/night-sky.png';
 
 const COUNTRIES = [
@@ -13,7 +12,6 @@ const COUNTRIES = [
   { name: 'MEKSİKA', lat: 23.6, lng: -102.5, region: 'AMERİKA' },
   { name: 'BREZİLYA', lat: -10.8, lng: -52.9, region: 'AMERİKA', label: true },
   { name: 'ARJANTİN', lat: -38.4, lng: -63.6, region: 'AMERİKA' },
-
   { name: 'ALMANYA', lat: 51.1, lng: 10.4, region: 'AVRUPA', hub: true, label: true },
   { name: 'İNGİLTERE', lat: 54.2, lng: -2.5, region: 'AVRUPA', label: true },
   { name: 'FRANSA', lat: 46.4, lng: 2.2, region: 'AVRUPA', label: true },
@@ -23,21 +21,18 @@ const COUNTRIES = [
   { name: 'İSVEÇ', lat: 62.0, lng: 15.0, region: 'AVRUPA' },
   { name: 'POLONYA', lat: 52.1, lng: 19.4, region: 'AVRUPA' },
   { name: 'RUSYA', lat: 61.5, lng: 90.0, region: 'AVRUPA', label: true },
-
   { name: 'BAE', lat: 24.3, lng: 54.3, region: 'MEA', hub: true, label: true },
   { name: 'MISIR', lat: 26.8, lng: 30.8, region: 'MEA', label: true },
   { name: 'SUUDİ ARABİSTAN', lat: 23.9, lng: 45.1, region: 'MEA' },
   { name: 'GÜNEY AFRİKA', lat: -30.6, lng: 22.9, region: 'MEA', label: true },
   { name: 'NİJERYA', lat: 9.1, lng: 8.7, region: 'MEA' },
   { name: 'KENYA', lat: 0.1, lng: 37.9, region: 'MEA' },
-
   { name: 'SİNGAPUR', lat: 1.35, lng: 103.82, region: 'ASYA', hub: true, label: true },
   { name: 'ÇİN', lat: 35.9, lng: 104.2, region: 'ASYA', label: true },
   { name: 'HİNDİSTAN', lat: 22.6, lng: 79.0, region: 'ASYA', label: true },
   { name: 'JAPONYA', lat: 36.2, lng: 138.2, region: 'ASYA', label: true },
   { name: 'GÜNEY KORE', lat: 36.4, lng: 127.9, region: 'ASYA' },
   { name: 'ENDONEZYA', lat: -2.5, lng: 118.0, region: 'ASYA' },
-
   { name: 'AVUSTRALYA', lat: -25.3, lng: 133.8, region: 'OKYANUSYA', hub: true, label: true },
   { name: 'YENİ ZELANDA', lat: -41.3, lng: 174.8, region: 'OKYANUSYA' },
 ];
@@ -52,134 +47,105 @@ const REGION_HUB = {
 
 const FILTERS = ['TÜMÜ', 'AMERİKA', 'AVRUPA', 'MEA', 'ASYA', 'OKYANUSYA', 'HUBLAR'];
 
+function normalizeName(value = '') {
+  return value
+    .toLocaleLowerCase('tr-TR')
+    .replaceAll('ı', 'i')
+    .replaceAll('ü', 'u')
+    .replaceAll('ö', 'o')
+    .replaceAll('ş', 's')
+    .replaceAll('ğ', 'g')
+    .replaceAll('ç', 'c');
+}
+
 function isTurkeyFeature(feature) {
-  const name = String(feature?.properties?.name || feature?.properties?.ADMIN || '').toLowerCase();
-  return name === 'turkey' || name === 'türkiye' || name.includes('turkey');
+  const name = normalizeName(feature?.properties?.name || feature?.properties?.ADMIN || '');
+  return name.includes('turkey') || name.includes('turkiye');
 }
 
-function buildArcs(countries) {
-  const visibleNames = new Set(countries.map((c) => c.name));
-  const arcs = [];
-
-  Object.entries(REGION_HUB).forEach(([region, hubName]) => {
-    const hub = COUNTRIES.find((c) => c.name === hubName);
-    if (!hub) return;
-
-    const regionMembers = countries.filter((c) => c.region === region && !c.target && c.name !== hubName);
-    regionMembers.forEach((country) => {
-      arcs.push({
-        startLat: country.lat,
-        startLng: country.lng,
-        endLat: hub.lat,
-        endLng: hub.lng,
-        type: 'edge',
-      });
-    });
-
-    if (visibleNames.has(hubName) || regionMembers.length) {
-      const turkey = COUNTRIES[0];
-      arcs.push({
-        startLat: hub.lat,
-        startLng: hub.lng,
-        endLat: turkey.lat,
-        endLng: turkey.lng,
-        type: 'backbone',
-      });
-    }
-  });
-
-  return arcs;
+function landColor(feature) {
+  if (isTurkeyFeature(feature)) return '#9f3045';
+  const raw = feature?.properties?.name || '';
+  let hash = 0;
+  for (let i = 0; i < raw.length; i += 1) hash = (hash * 31 + raw.charCodeAt(i)) >>> 0;
+  const palette = ['#263747', '#2c3d4d', '#314253', '#283b4b', '#334556'];
+  return palette[hash % palette.length];
 }
 
-function Constellations() {
-  return (
-    <div className="constellation-layer" aria-hidden="true">
-      <svg className="constellation constellation-orion" viewBox="0 0 220 260">
-        <g className="const-lines">
-          <path d="M51 31 L84 100 L105 128 L128 102 L171 34" />
-          <path d="M84 100 L54 218" />
-          <path d="M128 102 L171 220" />
-        </g>
-        {[['51','31',3.4],['171','34',3],['84','100',2.4],['105','128',2.8],['128','102',2.4],['54','218',3.2],['171','220',3.5]].map(([cx,cy,r],i)=><circle key={i} cx={cx} cy={cy} r={r}/>) }
-      </svg>
-
-      <svg className="constellation constellation-dipper" viewBox="0 0 300 180">
-        <g className="const-lines"><path d="M24 85 L76 52 L127 78 L122 123 L69 128 L24 85 L183 54 L259 39" /></g>
-        {[['24','85',3],['76','52',2.6],['127','78',2.4],['122','123',2.5],['69','128',2.5],['183','54',2.7],['259','39',3.1]].map(([cx,cy,r],i)=><circle key={i} cx={cx} cy={cy} r={r}/>) }
-      </svg>
-
-      <svg className="constellation constellation-cassiopeia" viewBox="0 0 260 130">
-        <g className="const-lines"><path d="M14 39 L66 91 L121 27 L180 81 L242 25" /></g>
-        {[['14','39',2.7],['66','91',3],['121','27',2.8],['180','81',2.6],['242','25',3.2]].map(([cx,cy,r],i)=><circle key={i} cx={cx} cy={cy} r={r}/>) }
-      </svg>
-    </div>
-  );
+function useWindowSize() {
+  const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  useEffect(() => {
+    const onResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return size;
 }
 
-function FilterPanel({
-  open,
-  setOpen,
-  activeFilter,
-  setActiveFilter,
-  labelScale,
-  setLabelScale,
-  nodeScale,
-  setNodeScale,
-  flowDensity,
-  setFlowDensity,
-}) {
+function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale, setLabelScale, nodeScale, setNodeScale, flowDensity, setFlowDensity }) {
   return (
     <div className="filter-wrap">
       <button className={`filter-button ${open ? 'active' : ''}`} onClick={() => setOpen((v) => !v)}>
-        <span className="filter-glyph">◈</span>
-        <span>FİLTRE</span>
+        <span className="filter-icon">⌘</span><span>FİLTRE</span>
       </button>
-
       {open && (
         <div className="filter-panel">
-          <div className="filter-title">BÖLGE</div>
+          <div className="filter-section-title">BÖLGE</div>
           <div className="region-grid">
             {FILTERS.map((filter) => (
-              <button
-                key={filter}
-                className={activeFilter === filter ? 'selected' : ''}
-                onClick={() => setActiveFilter(filter)}
-              >
-                {filter}
-              </button>
+              <button key={filter} className={activeFilter === filter ? 'selected' : ''} onClick={() => setActiveFilter(filter)}>{filter}</button>
             ))}
           </div>
-
           <div className="control-row">
             <div className="control-label"><span>ÜLKE İSİMLERİ</span><b>{Math.round(labelScale * 100)}%</b></div>
             <input type="range" min="0.55" max="1.65" step="0.05" value={labelScale} onChange={(e) => setLabelScale(Number(e.target.value))} />
           </div>
-
           <div className="control-row">
             <div className="control-label"><span>NODE BOYUTU</span><b>{Math.round(nodeScale * 100)}%</b></div>
-            <input type="range" min="0.6" max="1.7" step="0.05" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} />
+            <input type="range" min="0.65" max="1.7" step="0.05" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} />
           </div>
-
           <div className="control-row">
             <div className="control-label"><span>AKIŞ YOĞUNLUĞU</span><b>{flowDensity}</b></div>
             <input type="range" min="1" max="5" step="1" value={flowDensity} onChange={(e) => setFlowDensity(Number(e.target.value))} />
           </div>
-
-          <div className="legend-row">
-            <span><i className="legend-dot normal" /> NODE</span>
-            <span><i className="legend-dot hub" /> HUB</span>
-            <span><i className="legend-dot turkey" /> TÜRKİYE</span>
-          </div>
+          <div className="hub-legend"><span className="hub-dot" /> HUB NODE</div>
         </div>
       )}
     </div>
   );
 }
 
+function ConstellationBackdrop() {
+  return (
+    <div className="space-backdrop">
+      <div className="starfield starfield-a" />
+      <div className="starfield starfield-b" />
+      <div className="nebula nebula-a" />
+      <div className="nebula nebula-b" />
+      <div className="nebula nebula-c" />
+      <svg className="constellation constellation-orion" viewBox="0 0 220 220" aria-hidden="true">
+        <path className="const-lines" d="M44 28 L80 90 L110 102 L139 94 L178 31 M80 90 L60 180 M139 94 L166 182" />
+        {[ [44,28],[178,31],[80,90],[110,102],[139,94],[60,180],[166,182] ].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===0||i===1?3:2}/>) }
+      </svg>
+      <svg className="constellation constellation-dipper" viewBox="0 0 280 170" aria-hidden="true">
+        <path className="const-lines" d="M32 83 L71 48 L117 66 L114 111 L62 119 L32 83 M117 66 L174 45 L232 31" />
+        {[ [32,83],[71,48],[117,66],[114,111],[62,119],[174,45],[232,31] ].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===2?3:2}/>) }
+      </svg>
+      <svg className="constellation constellation-cassiopeia" viewBox="0 0 240 110" aria-hidden="true">
+        <path className="const-lines" d="M15 34 L62 74 L112 24 L164 68 L220 23" />
+        {[ [15,34],[62,74],[112,24],[164,68],[220,23] ].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===2?3:2}/>) }
+      </svg>
+      <div className="shooting-star shooting-star-a" />
+      <div className="shooting-star shooting-star-b" />
+      <div className="shooting-star shooting-star-c" />
+    </div>
+  );
+}
+
 export default function App() {
   const globeRef = useRef();
-  const [world, setWorld] = useState([]);
-  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const { width, height } = useWindowSize();
+  const [geojson, setGeojson] = useState({ features: [] });
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('TÜMÜ');
   const [labelScale, setLabelScale] = useState(1);
@@ -187,29 +153,10 @@ export default function App() {
   const [flowDensity, setFlowDensity] = useState(3);
 
   useEffect(() => {
-    fetch(WORLD_URL)
-      .then((r) => r.json())
-      .then((geojson) => setWorld(geojson.features || []))
-      .catch(() => setWorld([]));
+    let active = true;
+    fetch(WORLD_URL).then((r) => r.json()).then((data) => active && setGeojson(data)).catch(() => {});
+    return () => { active = false; };
   }, []);
-
-  useEffect(() => {
-    const onResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    const globe = globeRef.current;
-    if (!globe) return;
-    const controls = globe.controls();
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.22;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.035;
-    controls.minDistance = 145;
-    controls.maxDistance = 500;
-  }, [size.width, size.height]);
 
   const visibleCountries = useMemo(() => {
     if (activeFilter === 'TÜMÜ') return COUNTRIES;
@@ -217,84 +164,104 @@ export default function App() {
     return COUNTRIES.filter((c) => c.region === activeFilter || c.target);
   }, [activeFilter]);
 
-  const labels = useMemo(() => visibleCountries.filter((c) => c.label), [visibleCountries]);
   const arcs = useMemo(() => {
-    const base = buildArcs(visibleCountries);
-    if (flowDensity <= 1) return base.filter((_, i) => i % 3 === 0);
-    if (flowDensity === 2) return base.filter((_, i) => i % 2 === 0 || i < 5);
-    return base;
-  }, [visibleCountries, flowDensity]);
+    const byName = new Map(COUNTRIES.map((c) => [c.name, c]));
+    const result = [];
+    visibleCountries.forEach((country) => {
+      if (country.target) return;
+      if (country.hub) {
+        result.push({ from: country, to: byName.get('TÜRKİYE'), backbone: true });
+      } else {
+        const hub = byName.get(REGION_HUB[country.region]);
+        if (hub) result.push({ from: country, to: hub, backbone: false });
+      }
+    });
+    return result;
+  }, [visibleCountries]);
 
-  const rings = useMemo(() => visibleCountries.filter((c) => c.hub || c.target), [visibleCountries]);
+  const labels = useMemo(() => visibleCountries.filter((c) => c.label), [visibleCountries]);
+  const hubs = useMemo(() => visibleCountries.filter((c) => c.hub || c.target), [visibleCountries]);
+
+  const onReady = () => {
+    const globe = globeRef.current;
+    if (!globe) return;
+    const material = globe.globeMaterial?.();
+    if (material) {
+      material.color = new THREE.Color('#071a2d');
+      material.emissive = new THREE.Color('#020914');
+      material.emissiveIntensity = 0.42;
+      material.roughness = 0.82;
+      material.metalness = 0.12;
+    }
+    const controls = globe.controls?.();
+    if (controls) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.32;
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.055;
+    }
+    globe.pointOfView?.({ lat: 24, lng: 24, altitude: 2.15 }, 0);
+  };
 
   return (
     <main className="space-shell">
-      <div className="nebula nebula-a" />
-      <div className="nebula nebula-b" />
-      <div className="nebula nebula-c" />
-      <Constellations />
-      <div className="shooting-star shooting-star-a" />
-      <div className="shooting-star shooting-star-b" />
-      <div className="shooting-star shooting-star-c" />
-
+      <ConstellationBackdrop />
       <div className="globe-host">
         <Globe
           ref={globeRef}
-          width={size.width}
-          height={size.height}
-          backgroundColor="rgba(0,0,0,0)"
+          width={width}
+          height={height}
+          onGlobeReady={onReady}
           backgroundImageUrl={SPACE_IMG}
-          globeImageUrl={EARTH_IMG}
-          bumpImageUrl={EARTH_BUMP}
+          backgroundColor="rgba(0,0,0,0)"
           showAtmosphere
-          atmosphereColor="#6eb7ff"
-          atmosphereAltitude={0.14}
-          polygonsData={world}
-          polygonAltitude={(d) => (isTurkeyFeature(d) ? 0.008 : 0.0015)}
-          polygonCapColor={(d) => (isTurkeyFeature(d) ? 'rgba(205, 18, 45, 0.62)' : 'rgba(0,0,0,0)')}
-          polygonSideColor={(d) => (isTurkeyFeature(d) ? 'rgba(120, 8, 28, 0.28)' : 'rgba(0,0,0,0)')}
-          polygonStrokeColor={(d) => (isTurkeyFeature(d) ? 'rgba(255,126,142,0.95)' : 'rgba(211,232,255,0.18)')}
-          polygonsTransitionDuration={0}
-          lineHoverPrecision={0}
-
+          atmosphereColor="#4aa8ff"
+          atmosphereAltitude={0.16}
+          showGraticules
+          polygonsData={geojson.features}
+          polygonCapColor={landColor}
+          polygonSideColor={(d) => isTurkeyFeature(d) ? '#551525' : '#111c27'}
+          polygonStrokeColor={(d) => isTurkeyFeature(d) ? '#ff7188' : 'rgba(154,195,220,0.34)'}
+          polygonAltitude={(d) => isTurkeyFeature(d) ? 0.012 : 0.004}
+          polygonTransitionDuration={250}
           pointsData={visibleCountries}
           pointLat="lat"
           pointLng="lng"
-          pointAltitude={(d) => (d.target ? 0.014 : d.hub ? 0.011 : 0.006)}
-          pointRadius={(d) => (d.target ? 0.26 : d.hub ? 0.20 : 0.095) * nodeScale}
-          pointColor={(d) => (d.target ? '#ff3858' : d.hub ? '#ffd76a' : '#3dff9d')}
-          pointsMerge
-
-          ringsData={rings}
+          pointAltitude={0.007}
+          pointRadius={(d) => (d.target ? 0.28 : d.hub ? 0.21 : 0.105) * nodeScale}
+          pointColor={(d) => d.target ? '#ff3659' : d.hub ? '#ffc85c' : '#37f2a5'}
+          pointsMerge={false}
+          ringsData={hubs}
           ringLat="lat"
           ringLng="lng"
-          ringAltitude={0.012}
-          ringColor={(d) => () => (d.target ? 'rgba(255,56,88,0.85)' : 'rgba(255,215,106,0.75)')}
-          ringMaxRadius={(d) => (d.target ? 3.2 : 2.1) * nodeScale}
-          ringPropagationSpeed={(d) => (d.target ? 2.1 : 1.4)}
-          ringRepeatPeriod={(d) => (d.target ? 1050 : 1750)}
-
+          ringAltitude={0.008}
+          ringColor={(d) => () => d.target ? '#ff3659' : '#ffd16a'}
+          ringMaxRadius={(d) => (d.target ? 2.2 : 1.35) * nodeScale}
+          ringPropagationSpeed={0.7}
+          ringRepeatPeriod={1200}
           arcsData={arcs}
-          arcColor={(d) => (d.type === 'backbone' ? ['#ffd76a', '#ff3858'] : ['#35ff9c', '#77f6ff'])}
-          arcAltitudeAutoScale={(d) => (d.type === 'backbone' ? 0.34 : 0.22)}
-          arcStroke={(d) => (d.type === 'backbone' ? 0.34 : 0.18)}
-          arcDashLength={(d) => (d.type === 'backbone' ? 0.36 : 0.22)}
-          arcDashGap={(d) => (d.type === 'backbone' ? 0.18 : 0.14)}
+          arcStartLat={(d) => d.from.lat}
+          arcStartLng={(d) => d.from.lng}
+          arcEndLat={(d) => d.to.lat}
+          arcEndLng={(d) => d.to.lng}
+          arcColor={(d) => d.backbone ? ['#7fffe0', '#ffcd69'] : ['#39efa8', '#73bfff']}
+          arcAltitudeAutoScale={(d) => d.backbone ? 0.34 : 0.2}
+          arcStroke={(d) => d.backbone ? 0.55 : 0.28}
+          arcDashLength={(d) => d.backbone ? 0.22 : 0.14}
+          arcDashGap={(d) => d.backbone ? 0.07 : 0.11}
           arcDashInitialGap={() => Math.random()}
-          arcDashAnimateTime={(d) => (d.type === 'backbone' ? 1150 : Math.max(1450, 2550 - flowDensity * 180))}
-
+          arcDashAnimateTime={(d) => Math.max(850, 2500 - flowDensity * 260 + (d.backbone ? -250 : 180))}
           labelsData={labels}
           labelLat="lat"
           labelLng="lng"
           labelText="name"
-          labelColor={(d) => (d.target ? '#ff9aab' : d.hub ? '#ffe7a2' : '#d8fff1')}
-          labelSize={(d) => (d.target ? 0.72 : d.hub ? 0.58 : 0.48) * labelScale}
-          labelDotRadius={(d) => (d.target ? 0.16 : 0.08) * nodeScale}
-          labelAltitude={(d) => (d.target ? 0.027 : 0.018)}
+          labelColor={(d) => d.target ? '#ff8799' : d.hub ? '#ffe09a' : '#d8efff'}
+          labelSize={(d) => (d.target ? 1.0 : d.hub ? 0.72 : 0.56) * labelScale}
+          labelDotRadius={(d) => (d.target ? 0.2 : 0.11) * nodeScale}
+          labelAltitude={0.018}
           labelResolution={3}
         />
       </div>
-
       <FilterPanel
         open={filterOpen}
         setOpen={setFilterOpen}
