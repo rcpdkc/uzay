@@ -9,7 +9,7 @@
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; width: 100%; height: 100%; background: #000105; }
 body { overflow: hidden; }
-canvas { display: block; }
+canvas { display: block; outline: none; }
 
 .space-shell {
   position: relative;
@@ -17,9 +17,10 @@ canvas { display: block; }
   height: 100dvh;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 47%, rgba(7, 29, 58, .24), transparent 30%),
-    radial-gradient(circle at 18% 20%, rgba(11, 36, 68, .10), transparent 22%),
-    radial-gradient(circle at 82% 72%, rgba(0, 105, 75, .06), transparent 24%),
+    radial-gradient(circle at 50% 46%, rgba(8, 37, 67, .24), transparent 31%),
+    radial-gradient(circle at 14% 16%, rgba(19, 52, 105, .12), transparent 25%),
+    radial-gradient(circle at 86% 76%, rgba(0, 108, 79, .075), transparent 25%),
+    radial-gradient(circle at 72% 12%, rgba(70, 28, 118, .045), transparent 20%),
     #000105;
 }
 
@@ -27,31 +28,35 @@ canvas { display: block; }
   position: absolute;
   inset: 0;
   z-index: 2;
+  cursor: grab;
+  touch-action: none;
 }
+
+.scene-layer:active { cursor: grabbing; }
 
 .deep-space-glow {
   position: absolute;
   pointer-events: none;
   border-radius: 50%;
-  filter: blur(110px);
-  opacity: .16;
+  filter: blur(125px);
+  opacity: .15;
   mix-blend-mode: screen;
 }
 
 .deep-space-glow-a {
-  width: 42vw;
-  height: 42vw;
-  left: -13vw;
-  top: 4vh;
-  background: radial-gradient(circle, rgba(0, 101, 255, .75), rgba(0, 101, 255, 0) 68%);
+  width: 46vw;
+  height: 46vw;
+  left: -16vw;
+  top: 0;
+  background: radial-gradient(circle, rgba(0, 92, 255, .65), rgba(0, 92, 255, 0) 69%);
 }
 
 .deep-space-glow-b {
-  width: 34vw;
-  height: 34vw;
-  right: -8vw;
-  bottom: -8vh;
-  background: radial-gradient(circle, rgba(0, 211, 145, .38), rgba(0, 211, 145, 0) 70%);
+  width: 39vw;
+  height: 39vw;
+  right: -12vw;
+  bottom: -12vh;
+  background: radial-gradient(circle, rgba(0, 206, 143, .30), rgba(0, 206, 143, 0) 72%);
 }
 
 .vignette {
@@ -60,30 +65,30 @@ canvas { display: block; }
   z-index: 8;
   pointer-events: none;
   background:
-    radial-gradient(circle at center, transparent 50%, rgba(0, 0, 0, .18) 72%, rgba(0, 0, 0, .55) 100%),
-    linear-gradient(to bottom, rgba(0,0,0,.18), transparent 18%, transparent 82%, rgba(0,0,0,.2));
+    radial-gradient(circle at center, transparent 45%, rgba(0, 0, 0, .12) 68%, rgba(0, 0, 0, .58) 100%),
+    linear-gradient(to bottom, rgba(0,0,0,.16), transparent 16%, transparent 84%, rgba(0,0,0,.24));
 }
 
 .grain {
   position: absolute;
-  inset: -50%;
+  inset: -45%;
   z-index: 9;
   pointer-events: none;
-  opacity: .035;
+  opacity: .022;
   background-image:
-    radial-gradient(circle at 20% 30%, #fff 0 .6px, transparent .8px),
-    radial-gradient(circle at 70% 60%, #fff 0 .5px, transparent .8px),
-    radial-gradient(circle at 40% 80%, #fff 0 .45px, transparent .7px);
-  background-size: 34px 34px, 41px 41px, 29px 29px;
-  animation: drift 22s linear infinite;
+    radial-gradient(circle at 20% 30%, #fff 0 .55px, transparent .8px),
+    radial-gradient(circle at 70% 60%, #fff 0 .45px, transparent .75px),
+    radial-gradient(circle at 40% 80%, #fff 0 .4px, transparent .7px);
+  background-size: 36px 36px, 43px 43px, 31px 31px;
+  animation: drift 32s linear infinite;
 }
 
 @keyframes drift {
   from { transform: translate3d(0,0,0) rotate(0deg); }
-  to { transform: translate3d(3%,2%,0) rotate(.8deg); }
+  to { transform: translate3d(2.5%,1.8%,0) rotate(.6deg); }
 }
 
 @media (max-width: 760px) {
-  .deep-space-glow-a { width: 80vw; height: 80vw; left: -35vw; }
-  .deep-space-glow-b { width: 70vw; height: 70vw; right: -30vw; }
+  .deep-space-glow-a { width: 84vw; height: 84vw; left: -38vw; }
+  .deep-space-glow-b { width: 74vw; height: 74vw; right: -32vw; }
 }
