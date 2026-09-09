@@ -1,34 +1,51 @@
-import React, { Suspense, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Line, OrbitControls, Stars, useTexture } from '@react-three/drei';
+import { Line, OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 
-const R = 2.45;
-const target = { lat: 39.0, lon: 35.0 };
+const R = 2.55;
+const WORLD_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
 
-const sources = [
-  [40.7, -74.0], [34.0, -118.2], [19.4, -99.1], [-23.5, -46.6], [-34.6, -58.4],
-  [51.5, -0.1], [48.9, 2.35], [52.5, 13.4], [52.37, 4.9], [41.9, 12.5],
-  [40.4, -3.7], [59.3, 18.1], [55.7, 37.6], [30.0, 31.2], [-1.3, 36.8],
-  [-26.2, 28.0], [24.45, 54.38], [28.61, 77.21], [13.75, 100.5], [1.35, 103.82],
-  [22.3, 114.2], [35.68, 139.69], [37.56, 126.97], [-33.87, 151.2], [-37.8, 144.9],
-  [-6.2, 106.8], [14.6, 121.0], [3.14, 101.69], [25.0, 121.5], [31.2, 121.5],
-].map(([lat, lon], index) => ({ lat, lon, index }));
+const TURKEY = { name: 'TÜRKİYE', lat: 39.0, lon: 35.0, label: true, target: true };
 
-const minorNodes = [
-  [43.7,-79.4],[45.5,-73.6],[25.8,-80.2],[32.8,-96.8],[47.6,-122.3],[37.8,-122.4],
-  [-12.0,-77.0],[-33.45,-70.7],[-22.9,-43.2],[-34.9,-56.2],[53.3,-6.3],[50.1,8.7],
-  [47.4,8.5],[45.5,9.2],[50.8,4.4],[48.2,16.4],[52.2,21.0],[50.4,30.5],[41.0,29.0],
-  [32.1,34.8],[25.3,55.3],[24.7,46.7],[33.3,44.4],[35.7,51.4],[23.6,58.4],[15.5,32.6],
-  [6.5,3.4],[5.6,-0.2],[-4.3,15.3],[-1.9,30.1],[9.0,38.7],[-33.9,18.4],
-  [19.1,72.9],[12.97,77.6],[13.1,80.3],[17.4,78.5],[23.0,72.6],[22.6,88.4],[27.7,85.3],
-  [23.8,90.4],[24.9,67.0],[31.5,74.3],[33.7,73.1],[4.2,73.5],[6.9,79.9],[16.8,96.2],
-  [21.0,105.8],[10.8,106.6],[11.6,104.9],[17.97,102.6],[18.8,98.98],[22.0,96.1],
-  [34.7,135.5],[35.2,136.9],[43.1,141.3],[33.6,130.4],[37.5,127.0],[35.2,129.1],
-  [39.9,116.4],[22.5,113.9],[23.1,113.3],[30.6,104.1],[29.6,106.5],[34.3,108.9],
-  [-6.9,107.6],[-7.3,112.7],[-8.65,115.2],[1.5,110.3],[5.4,100.3],[-27.5,153.0],
-  [-31.95,115.86],[-36.85,174.76],[-41.3,174.8],[-17.7,178.1]
-].map(([lat, lon]) => ({ lat, lon }));
+const COUNTRIES = [
+  { name: 'ABD', lat: 39.8, lon: -98.6, label: true, flow: true },
+  { name: 'KANADA', lat: 57.0, lon: -106.0, label: true },
+  { name: 'MEKSİKA', lat: 23.6, lon: -102.5 },
+  { name: 'BREZİLYA', lat: -10.8, lon: -52.9, label: true, flow: true },
+  { name: 'ARJANTİN', lat: -38.4, lon: -63.6 },
+  { name: 'İNGİLTERE', lat: 54.2, lon: -2.5, label: true, flow: true },
+  { name: 'FRANSA', lat: 46.4, lon: 2.2, label: true, flow: true },
+  { name: 'ALMANYA', lat: 51.1, lon: 10.4, label: true, flow: true },
+  { name: 'İSPANYA', lat: 40.3, lon: -3.7 },
+  { name: 'İTALYA', lat: 42.8, lon: 12.5 },
+  { name: 'HOLLANDA', lat: 52.2, lon: 5.3 },
+  { name: 'İSVEÇ', lat: 62.0, lon: 15.0 },
+  { name: 'NORVEÇ', lat: 61.5, lon: 9.0 },
+  { name: 'POLONYA', lat: 52.1, lon: 19.4 },
+  { name: 'RUSYA', lat: 61.5, lon: 90.0, label: true, flow: true },
+  TURKEY,
+  { name: 'MISIR', lat: 26.8, lon: 30.8, label: true, flow: true },
+  { name: 'SUUDİ ARABİSTAN', lat: 23.9, lon: 45.1 },
+  { name: 'BAE', lat: 24.3, lon: 54.3, label: true, flow: true },
+  { name: 'GÜNEY AFRİKA', lat: -30.6, lon: 22.9, label: true, flow: true },
+  { name: 'NİJERYA', lat: 9.1, lon: 8.7 },
+  { name: 'KENYA', lat: 0.1, lon: 37.9 },
+  { name: 'HİNDİSTAN', lat: 22.6, lon: 79.0, label: true, flow: true },
+  { name: 'PAKİSTAN', lat: 30.4, lon: 69.4 },
+  { name: 'ÇİN', lat: 35.9, lon: 104.2, label: true, flow: true },
+  { name: 'JAPONYA', lat: 36.2, lon: 138.2, label: true, flow: true },
+  { name: 'GÜNEY KORE', lat: 36.4, lon: 127.9, label: true },
+  { name: 'TAYLAND', lat: 15.9, lon: 100.9 },
+  { name: 'VİETNAM', lat: 16.2, lon: 107.8 },
+  { name: 'SİNGAPUR', lat: 1.35, lon: 103.82, label: true, flow: true },
+  { name: 'ENDONEZYA', lat: -2.5, lon: 118.0 },
+  { name: 'FİLİPİNLER', lat: 12.8, lon: 121.8 },
+  { name: 'AVUSTRALYA', lat: -25.3, lon: 133.8, label: true, flow: true },
+  { name: 'YENİ ZELANDA', lat: -41.3, lon: 174.8 },
+].map((country, index) => ({ ...country, index }));
+
+const FLOW_COUNTRIES = COUNTRIES.filter((country) => country.flow && !country.target);
 
 function latLonToVec3(lat, lon, radius = R) {
   const phi = (90 - lat) * Math.PI / 180;
@@ -40,137 +57,319 @@ function latLonToVec3(lat, lon, radius = R) {
   );
 }
 
-function DataFlow({ source, index }) {
-  const start = useMemo(() => latLonToVec3(source.lat, source.lon, R + 0.025), [source]);
-  const end = useMemo(() => latLonToVec3(target.lat, target.lon, R + 0.035), []);
+function buildGraticule() {
+  const lines = [];
+  for (let lat = -60; lat <= 60; lat += 20) {
+    const points = [];
+    for (let lon = -180; lon <= 180; lon += 3) points.push(latLonToVec3(lat, lon, R + 0.006));
+    lines.push(points);
+  }
+  for (let lon = -180; lon < 180; lon += 20) {
+    const points = [];
+    for (let lat = -85; lat <= 85; lat += 3) points.push(latLonToVec3(lat, lon, R + 0.006));
+    lines.push(points);
+  }
+  return lines;
+}
+
+function CountryBorders() {
+  const [rings, setRings] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch(WORLD_URL)
+      .then((response) => response.json())
+      .then((geojson) => {
+        if (!active) return;
+        const next = [];
+        geojson.features.forEach((feature) => {
+          const geometry = feature.geometry;
+          if (!geometry) return;
+          const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+          polygons.forEach((polygon) => {
+            const outerRing = polygon?.[0];
+            if (!outerRing || outerRing.length < 2) return;
+            next.push(outerRing.map(([lon, lat]) => latLonToVec3(lat, lon, R + 0.018)));
+          });
+        });
+        setRings(next);
+      })
+      .catch(() => setRings([]));
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <group>
+      {rings.map((points, index) => (
+        <Line
+          key={`border-${index}`}
+          points={points}
+          color="#59d8c4"
+          lineWidth={0.42}
+          transparent
+          opacity={0.52}
+          depthWrite={false}
+        />
+      ))}
+    </group>
+  );
+}
+
+function Graticule() {
+  const lines = useMemo(buildGraticule, []);
+  return (
+    <group>
+      {lines.map((points, index) => (
+        <Line
+          key={`grid-${index}`}
+          points={points}
+          color="#1b7181"
+          lineWidth={0.28}
+          transparent
+          opacity={0.17}
+          depthWrite={false}
+        />
+      ))}
+    </group>
+  );
+}
+
+function makeLabelTexture(text, target = false) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = target ? '700 42px Arial' : '600 34px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowBlur = target ? 22 : 14;
+  ctx.shadowColor = target ? '#ff334f' : '#18f0a5';
+  ctx.fillStyle = target ? '#ff7283' : '#c6fff0';
+  ctx.fillText(text, 256, 64);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  return texture;
+}
+
+function CountryLabel({ country }) {
+  const position = useMemo(
+    () => latLonToVec3(country.lat, country.lon, R + (country.target ? 0.13 : 0.09)),
+    [country.lat, country.lon, country.target],
+  );
+  const texture = useMemo(() => makeLabelTexture(country.name, country.target), [country.name, country.target]);
+
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  return (
+    <sprite position={position} scale={country.target ? [0.88, 0.22, 1] : [0.66, 0.165, 1]}>
+      <spriteMaterial
+        map={texture}
+        transparent
+        depthTest
+        depthWrite={false}
+        opacity={country.target ? 1 : 0.9}
+        toneMapped={false}
+      />
+    </sprite>
+  );
+}
+
+function CountryNode({ country }) {
+  const ref = useRef();
+  const position = useMemo(
+    () => latLonToVec3(country.lat, country.lon, R + 0.038),
+    [country.lat, country.lon],
+  );
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const pulse = 1 + Math.sin(clock.getElapsedTime() * 2.1 + country.index * 0.53) * 0.18;
+    ref.current.scale.setScalar(pulse);
+  });
+
+  const target = country.target;
+  return (
+    <group position={position} ref={ref}>
+      <mesh>
+        <sphereGeometry args={[target ? 0.062 : 0.022, 14, 14]} />
+        <meshBasicMaterial color={target ? '#ff2949' : '#31f5a2'} toneMapped={false} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[target ? 0.145 : 0.055, 14, 14]} />
+        <meshBasicMaterial
+          color={target ? '#ff2949' : '#28e99a'}
+          transparent
+          opacity={target ? 0.11 : 0.07}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function DataFlow({ country, index }) {
+  const start = useMemo(() => latLonToVec3(country.lat, country.lon, R + 0.045), [country]);
+  const end = useMemo(() => latLonToVec3(TURKEY.lat, TURKEY.lon, R + 0.055), []);
   const curve = useMemo(() => {
     const distance = start.distanceTo(end);
-    const lift = 0.5 + Math.min(distance * 0.22, 1.15);
+    const lift = 0.5 + Math.min(distance * 0.24, 1.25);
     const mid = start.clone().add(end).multiplyScalar(0.5).normalize().multiplyScalar(R + lift);
     return new THREE.QuadraticBezierCurve3(start, mid, end);
   }, [start, end]);
-  const points = useMemo(() => curve.getPoints(72), [curve]);
+  const points = useMemo(() => curve.getPoints(92), [curve]);
   const packetA = useRef();
   const packetB = useRef();
 
   useFrame(({ clock }) => {
     const elapsed = clock.getElapsedTime();
-    const speed = 0.085 + (index % 5) * 0.008;
+    const speed = 0.07 + (index % 5) * 0.008;
     const t1 = (elapsed * speed + index * 0.071) % 1;
-    const t2 = (t1 + 0.46) % 1;
+    const t2 = (t1 + 0.42) % 1;
     if (packetA.current) packetA.current.position.copy(curve.getPoint(t1));
     if (packetB.current) packetB.current.position.copy(curve.getPoint(t2));
   });
 
   return (
     <group>
-      <Line points={points} color="#23f1a4" lineWidth={0.62} transparent opacity={0.25} />
-      <Line points={points} color="#8ffff0" lineWidth={0.22} transparent opacity={0.72} />
+      <Line points={points} color="#20d995" lineWidth={0.55} transparent opacity={0.24} depthWrite={false} />
+      <Line points={points} color="#87ffe0" lineWidth={0.2} transparent opacity={0.68} depthWrite={false} />
       <mesh ref={packetA}>
-        <sphereGeometry args={[0.021, 10, 10]} />
-        <meshBasicMaterial color="#d7fff3" toneMapped={false} />
+        <sphereGeometry args={[0.022, 10, 10]} />
+        <meshBasicMaterial color="#e3fff7" toneMapped={false} />
       </mesh>
       <mesh ref={packetB}>
-        <sphereGeometry args={[0.014, 8, 8]} />
-        <meshBasicMaterial color="#38ffb0" toneMapped={false} />
+        <sphereGeometry args={[0.015, 8, 8]} />
+        <meshBasicMaterial color="#2effa7" toneMapped={false} />
       </mesh>
     </group>
   );
 }
 
-function PulsingNode({ lat, lon, major = false, index = 0 }) {
-  const ref = useRef();
-  const position = useMemo(() => latLonToVec3(lat, lon, R + 0.03), [lat, lon]);
+const ORION = {
+  points: [[-1.0,1.15,0],[1.0,1.05,0],[-0.52,0.18,0],[0,0.1,0],[0.52,0.02,0],[-0.82,-1.05,0],[0.9,-1.15,0]],
+  links: [[0,2],[1,4],[2,3],[3,4],[2,5],[4,6]],
+};
+const BIG_DIPPER = {
+  points: [[-1.3,.4,0],[-.55,.72,0],[.1,.35,0],[.05,-.38,0],[-.8,-.45,0],[-1.45,-.05,0],[.8,.58,0],[1.45,.72,0]],
+  links: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[2,6],[6,7]],
+};
+const CASSIOPEIA = {
+  points: [[-1.3,.35,0],[-.65,-.2,0],[0,.48,0],[.7,-.08,0],[1.35,.48,0]],
+  links: [[0,1],[1,2],[2,3],[3,4]],
+};
 
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const pulse = 1 + Math.sin(clock.getElapsedTime() * 2.2 + index * 0.6) * 0.22;
-    ref.current.scale.setScalar(pulse);
-  });
-
+function Constellation({ data, position, scale = 1, rotation = [0, 0, 0] }) {
   return (
-    <group position={position} ref={ref}>
-      <mesh>
-        <sphereGeometry args={[major ? 0.036 : 0.018, 12, 12]} />
-        <meshBasicMaterial color="#38ff97" toneMapped={false} />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[major ? 0.075 : 0.04, 12, 12]} />
-        <meshBasicMaterial color="#23e98d" transparent opacity={major ? 0.11 : 0.07} depthWrite={false} />
-      </mesh>
+    <group position={position} scale={scale} rotation={rotation}>
+      {data.links.map(([a, b], index) => (
+        <Line
+          key={`const-line-${index}`}
+          points={[data.points[a], data.points[b]]}
+          color="#7bbcff"
+          lineWidth={0.35}
+          transparent
+          opacity={0.18}
+          depthWrite={false}
+        />
+      ))}
+      {data.points.map((point, index) => (
+        <group key={`const-star-${index}`} position={point}>
+          <mesh>
+            <sphereGeometry args={[index % 3 === 0 ? 0.045 : 0.027, 8, 8]} />
+            <meshBasicMaterial color="#d9eeff" transparent opacity={0.86} toneMapped={false} />
+          </mesh>
+          <mesh>
+            <sphereGeometry args={[index % 3 === 0 ? 0.12 : 0.075, 8, 8]} />
+            <meshBasicMaterial color="#6caaff" transparent opacity={0.06} depthWrite={false} toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function DeepSpace() {
+  return (
+    <group>
+      <Stars radius={120} depth={86} count={10500} factor={2.5} saturation={0.12} fade speed={0.05} />
+      <Stars radius={55} depth={34} count={2300} factor={1.15} saturation={0} fade speed={0.02} />
+      <Constellation data={ORION} position={[-7.5, 2.6, -10]} scale={0.95} rotation={[0.1, 0.25, -0.2]} />
+      <Constellation data={BIG_DIPPER} position={[7.2, 3.0, -11]} scale={1.05} rotation={[-0.1, -0.3, 0.18]} />
+      <Constellation data={CASSIOPEIA} position={[6.2, -3.3, -9]} scale={0.85} rotation={[0.2, 0.15, -0.1]} />
     </group>
   );
 }
 
 function Globe() {
   const group = useRef();
-  const texture = useTexture('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
-  const turkey = useMemo(() => latLonToVec3(target.lat, target.lon, R + 0.045), []);
 
-  useFrame(() => {
-    if (group.current) group.current.rotation.y += 0.00018;
+  useFrame((_, delta) => {
+    if (group.current) group.current.rotation.y += delta * 0.035;
   });
 
   return (
-    <group ref={group} rotation={[0.08, -0.66, -0.02]}>
+    <group ref={group} rotation={[0.08, -0.58, -0.02]}>
       <mesh>
-        <sphereGeometry args={[R, 112, 112]} />
-        <meshStandardMaterial map={texture} roughness={0.9} metalness={0.02} />
+        <sphereGeometry args={[R, 96, 96]} />
+        <meshStandardMaterial color="#06141c" roughness={0.78} metalness={0.28} />
       </mesh>
 
       <mesh>
-        <sphereGeometry args={[R + 0.018, 80, 80]} />
-        <meshBasicMaterial color="#041729" transparent opacity={0.22} />
+        <sphereGeometry args={[R + 0.008, 72, 72]} />
+        <meshBasicMaterial color="#071f28" transparent opacity={0.28} depthWrite={false} />
       </mesh>
+
+      <Graticule />
+      <CountryBorders />
+
+      {COUNTRIES.map((country) => <CountryNode key={country.name} country={country} />)}
+      {FLOW_COUNTRIES.map((country, index) => <DataFlow key={`flow-${country.name}`} country={country} index={index} />)}
+      {COUNTRIES.filter((country) => country.label).map((country) => <CountryLabel key={`label-${country.name}`} country={country} />)}
 
       <mesh>
-        <sphereGeometry args={[R + 0.11, 72, 72]} />
-        <meshBasicMaterial color="#19a8ff" transparent opacity={0.035} side={THREE.BackSide} depthWrite={false} />
+        <sphereGeometry args={[R + 0.12, 72, 72]} />
+        <meshBasicMaterial
+          color="#0b9bc1"
+          transparent
+          opacity={0.028}
+          side={THREE.BackSide}
+          depthWrite={false}
+        />
       </mesh>
-
-      {minorNodes.map((node, i) => <PulsingNode key={`n-${i}`} {...node} index={i} />)}
-      {sources.map((source, i) => <PulsingNode key={`s-${i}`} {...source} major index={i} />)}
-      {sources.map((source, i) => <DataFlow key={`f-${i}`} source={source} index={i} />)}
-
-      <group position={turkey}>
-        <mesh>
-          <sphereGeometry args={[0.06, 20, 20]} />
-          <meshBasicMaterial color="#ff274d" toneMapped={false} />
-        </mesh>
-        <mesh>
-          <sphereGeometry args={[0.14, 20, 20]} />
-          <meshBasicMaterial color="#ff244a" transparent opacity={0.10} depthWrite={false} />
-        </mesh>
-      </group>
     </group>
   );
 }
 
 function Scene() {
   return (
-    <Canvas camera={{ position: [0, 0.05, 7.15], fov: 40 }} dpr={[1, 1.75]} gl={{ antialias: true }}>
+    <Canvas
+      camera={{ position: [0, 0.1, 7.4], fov: 39 }}
+      dpr={[1, 1.8]}
+      gl={{ antialias: true, alpha: false }}
+    >
       <color attach="background" args={["#000105"]} />
-      <fog attach="fog" args={["#000105", 10, 28]} />
-      <ambientLight intensity={0.26} />
-      <directionalLight position={[5, 2.5, 5]} intensity={2.5} />
-      <pointLight position={[-5, -1, 4]} intensity={22} distance={10} color="#0a53ff" />
-      <pointLight position={[4, 2, -4]} intensity={13} distance={9} color="#00d69a" />
+      <fog attach="fog" args={["#000105", 14, 40]} />
 
-      <Stars radius={110} depth={72} count={9800} factor={2.6} saturation={0.15} fade speed={0.08} />
-      <Stars radius={52} depth={28} count={1800} factor={1.2} saturation={0} fade speed={0.03} />
+      <ambientLight intensity={0.42} />
+      <directionalLight position={[5, 3, 6]} intensity={1.8} color="#bcecff" />
+      <pointLight position={[-5, -1, 4]} intensity={18} distance={11} color="#0d5fff" />
+      <pointLight position={[4, 2, -3]} intensity={12} distance={10} color="#00d69a" />
 
-      <Suspense fallback={null}>
-        <Globe />
-      </Suspense>
+      <DeepSpace />
+      <Globe />
 
       <OrbitControls
         enablePan={false}
         enableZoom
-        minDistance={4.5}
-        maxDistance={10.5}
-        autoRotate
-        autoRotateSpeed={0.08}
-        dampingFactor={0.035}
+        enableRotate
+        minDistance={4.7}
+        maxDistance={11}
+        rotateSpeed={0.48}
+        zoomSpeed={0.55}
+        dampingFactor={0.045}
         enableDamping
       />
     </Canvas>
