@@ -391,7 +391,7 @@ export default function App() {
           pathPointLng="lng"
           pathPointAlt="alt"
           pathColor={(d) => d.hub ? 'rgba(255,211,122,.68)' : 'rgba(78,169,255,.58)'}
-          pathStroke={(d) => d.hub ? 0.20 : 0.12}
+          pathStroke={(d) => d.hub ? 0.32 : 0.20}
           pathDashLength={1}
           pathDashGap={0}
           pathDashAnimateTime={0}
@@ -404,7 +404,7 @@ export default function App() {
           arcEndLng={(d) => d.to.lng}
           arcColor={(d) => d.hub ? ['#fff3bd', '#87d1ff'] : ['#e5f7ff', '#69c4ff']}
           arcAltitude={(d) => d.hub ? 0.36 : 0.28}
-          arcStroke={(d) => d.hub ? 0.34 : 0.23}
+          arcStroke={(d) => d.hub ? 0.42 : 0.30}
           arcDashLength={(d) => d.hub ? 0.026 : 0.018}
           arcDashGap={(d) => d.hub ? 0.974 : 0.982}
           arcDashInitialGap={(d) => (d.index * 0.137) % 1}
