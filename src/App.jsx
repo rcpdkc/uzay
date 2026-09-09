@@ -183,6 +183,26 @@ function SpaceBackdrop() {
   );
 }
 
+function createHtmlLabel(label) {
+  const el = document.createElement('div');
+  el.textContent = label.name;
+  el.style.pointerEvents = 'none';
+  el.style.whiteSpace = 'nowrap';
+  el.style.userSelect = 'none';
+  el.style.fontFamily = 'Inter, "Segoe UI", Arial, sans-serif';
+  el.style.fontWeight = label.target ? '800' : label.hub ? '700' : '600';
+  el.style.fontSize = `${(label.target ? 14 : label.hub ? 11 : 9.5) * label.scale}px`;
+  el.style.letterSpacing = label.target ? '.02em' : '.025em';
+  el.style.color = label.target ? '#fff2f4' : label.hub ? '#fff0c8' : '#dceffc';
+  el.style.textShadow = label.target
+    ? '0 0 5px #ff3659, 0 0 14px rgba(255,54,89,.65)'
+    : label.hub
+      ? '0 0 8px rgba(255,200,90,.7)'
+      : '0 0 7px rgba(75,170,255,.55)';
+  el.style.transform = 'translate(-50%, -115%)';
+  return el;
+}
+
 export default function App() {
   const globeRef = useRef();
   const { width, height } = useWindowSize();
@@ -191,7 +211,7 @@ export default function App() {
   const [activeFilter, setActiveFilter] = useState('TÜMÜ');
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
-  const [flowDensity, setFlowDensity] = useState(4);
+  const [flowDensity, setFlowDensity] = useState(3);
 
   useEffect(() => {
     let active = true;
@@ -223,13 +243,13 @@ export default function App() {
   })), [flowNodes]);
 
   const hubs = useMemo(() => visibleNodes.filter((node) => node.hub || node.target), [visibleNodes]);
-  const labels = useMemo(() => {
+  const htmlLabels = useMemo(() => {
     const unique = new Map();
     visibleNodes.filter((node) => node.label).forEach((node) => {
-      if (!unique.has(node.name)) unique.set(node.name, node);
+      if (!unique.has(node.name)) unique.set(node.name, { ...node, scale: labelScale });
     });
     return [...unique.values()];
-  }, [visibleNodes]);
+  }, [visibleNodes, labelScale]);
 
   const onReady = () => {
     const globe = globeRef.current;
@@ -259,9 +279,9 @@ export default function App() {
     const controls = globe.controls?.();
     if (controls) {
       controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.20;
+      controls.autoRotateSpeed = 0.18;
       controls.enableDamping = true;
-      controls.dampingFactor = 0.055;
+      controls.dampingFactor = 0.06;
       controls.minDistance = 135;
       controls.maxDistance = 430;
     }
@@ -309,8 +329,8 @@ export default function App() {
           ringAltitude={0.008}
           ringColor={(d) => () => d.target ? '#ff3858' : '#ffd06d'}
           ringMaxRadius={(d) => (d.target ? 2.5 : 1.55) * nodeScale}
-          ringPropagationSpeed={(d) => d.target ? 0.85 : 0.62}
-          ringRepeatPeriod={(d) => d.target ? 900 : 1500}
+          ringPropagationSpeed={(d) => d.target ? 0.55 : 0.40}
+          ringRepeatPeriod={(d) => d.target ? 1800 : 2400}
 
           arcsData={arcs}
           arcStartLat={(d) => d.from.lat}
@@ -319,22 +339,19 @@ export default function App() {
           arcEndLng={(d) => d.to.lng}
           arcColor={(d) => d.hub ? ['#ffd06a', '#7bc8ff'] : ['#42a9ff', '#b8ecff']}
           arcAltitudeAutoScale={(d) => d.hub ? 0.36 : 0.28}
-          arcStroke={(d) => d.hub ? 0.34 : 0.20}
-          arcDashLength={(d) => d.hub ? 0.18 : 0.105}
-          arcDashGap={(d) => d.hub ? 0.06 : 0.08}
-          arcDashInitialGap={(d) => (d.index * 0.079) % 1}
-          arcDashAnimateTime={(d) => d.hub ? 1150 : 1550}
-          arcsTransitionDuration={350}
+          arcStroke={(d) => d.hub ? 0.30 : 0.18}
+          arcDashLength={(d) => d.hub ? 0.14 : 0.075}
+          arcDashGap={(d) => d.hub ? 0.18 : 0.16}
+          arcDashInitialGap={(d) => (d.index * 0.113) % 1}
+          arcDashAnimateTime={(d) => d.hub ? 5800 : 7600}
+          arcsTransitionDuration={0}
 
-          labelsData={labels}
-          labelLat="lat"
-          labelLng="lng"
-          labelText="name"
-          labelColor={(d) => d.target ? '#ffecf0' : d.hub ? '#fff3cf' : '#d8ebfa'}
-          labelSize={(d) => (d.target ? 1.20 : d.hub ? 0.78 : 0.60) * labelScale}
-          labelDotRadius={(d) => (d.target ? 0.28 : d.hub ? 0.18 : 0.09) * nodeScale}
-          labelAltitude={0.018}
-          labelResolution={3}
+          htmlElementsData={htmlLabels}
+          htmlLat="lat"
+          htmlLng="lng"
+          htmlAltitude={0.026}
+          htmlElement={createHtmlLabel}
+          htmlTransitionDuration={0}
         />
       </div>
 
