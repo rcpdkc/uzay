@@ -3,53 +3,76 @@ import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 
 const WORLD_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
+const EARTH_NIGHT = 'https://unpkg.com/three-globe/example/img/earth-night.jpg';
+const EARTH_BUMP = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
+const SPACE_IMG = 'https://unpkg.com/three-globe/example/img/night-sky.png';
 
-const COUNTRIES = [
-  { name: 'TÜRKİYE', lat: 39.0, lng: 35.0, region: 'MEA', target: true, hub: true, label: true },
-  { name: 'ABD', lat: 39.2, lng: -98.5, region: 'AMERİKA', hub: true, label: true },
-  { name: 'KANADA', lat: 57.0, lng: -106.0, region: 'AMERİKA', label: true },
-  { name: 'MEKSİKA', lat: 23.6, lng: -102.5, region: 'AMERİKA' },
-  { name: 'BREZİLYA', lat: -10.8, lng: -52.9, region: 'AMERİKA', label: true },
-  { name: 'ARJANTİN', lat: -38.4, lng: -63.6, region: 'AMERİKA' },
+const TURKEY = { name: 'TÜRKİYE', lat: 39.0, lng: 35.0, region: 'MEA', target: true, hub: true, label: true };
 
-  { name: 'ALMANYA', lat: 51.1, lng: 10.4, region: 'AVRUPA', hub: true, label: true },
-  { name: 'İNGİLTERE', lat: 54.2, lng: -2.5, region: 'AVRUPA', label: true },
-  { name: 'FRANSA', lat: 46.4, lng: 2.2, region: 'AVRUPA', label: true },
-  { name: 'İSPANYA', lat: 40.3, lng: -3.7, region: 'AVRUPA' },
-  { name: 'İTALYA', lat: 42.8, lng: 12.5, region: 'AVRUPA' },
-  { name: 'HOLLANDA', lat: 52.2, lng: 5.3, region: 'AVRUPA' },
-  { name: 'İSVEÇ', lat: 62.0, lng: 15.0, region: 'AVRUPA' },
-  { name: 'POLONYA', lat: 52.1, lng: 19.4, region: 'AVRUPA' },
-  { name: 'RUSYA', lat: 61.5, lng: 90.0, region: 'AVRUPA', label: true },
+const NODES = [
+  TURKEY,
+  { name: 'ABD', lat: 40.71, lng: -74.0, region: 'AMERİKA', hub: true, label: true },
+  { name: 'ABD', lat: 34.05, lng: -118.24, region: 'AMERİKA' },
+  { name: 'ABD', lat: 37.77, lng: -122.42, region: 'AMERİKA' },
+  { name: 'ABD', lat: 41.88, lng: -87.63, region: 'AMERİKA' },
+  { name: 'ABD', lat: 29.76, lng: -95.37, region: 'AMERİKA' },
+  { name: 'KANADA', lat: 43.65, lng: -79.38, region: 'AMERİKA', label: true },
+  { name: 'KANADA', lat: 49.28, lng: -123.12, region: 'AMERİKA' },
+  { name: 'MEKSİKA', lat: 19.43, lng: -99.13, region: 'AMERİKA' },
+  { name: 'BREZİLYA', lat: -23.55, lng: -46.63, region: 'AMERİKA', label: true },
+  { name: 'BREZİLYA', lat: -22.91, lng: -43.17, region: 'AMERİKA' },
+  { name: 'ARJANTİN', lat: -34.60, lng: -58.38, region: 'AMERİKA' },
+  { name: 'ŞİLİ', lat: -33.45, lng: -70.67, region: 'AMERİKA' },
+  { name: 'PERU', lat: -12.05, lng: -77.04, region: 'AMERİKA' },
 
-  { name: 'BAE', lat: 24.3, lng: 54.3, region: 'MEA', hub: true, label: true },
-  { name: 'MISIR', lat: 26.8, lng: 30.8, region: 'MEA', label: true },
-  { name: 'SUUDİ ARABİSTAN', lat: 23.9, lng: 45.1, region: 'MEA' },
-  { name: 'GÜNEY AFRİKA', lat: -30.6, lng: 22.9, region: 'MEA', label: true },
-  { name: 'NİJERYA', lat: 9.1, lng: 8.7, region: 'MEA' },
-  { name: 'KENYA', lat: 0.1, lng: 37.9, region: 'MEA' },
+  { name: 'ALMANYA', lat: 50.11, lng: 8.68, region: 'AVRUPA', hub: true, label: true },
+  { name: 'ALMANYA', lat: 52.52, lng: 13.40, region: 'AVRUPA' },
+  { name: 'İNGİLTERE', lat: 51.51, lng: -0.13, region: 'AVRUPA', label: true },
+  { name: 'FRANSA', lat: 48.86, lng: 2.35, region: 'AVRUPA', label: true },
+  { name: 'HOLLANDA', lat: 52.37, lng: 4.90, region: 'AVRUPA' },
+  { name: 'BELÇİKA', lat: 50.85, lng: 4.35, region: 'AVRUPA' },
+  { name: 'İSPANYA', lat: 40.42, lng: -3.70, region: 'AVRUPA' },
+  { name: 'İTALYA', lat: 41.90, lng: 12.50, region: 'AVRUPA' },
+  { name: 'İSVİÇRE', lat: 47.38, lng: 8.54, region: 'AVRUPA' },
+  { name: 'POLONYA', lat: 52.23, lng: 21.01, region: 'AVRUPA' },
+  { name: 'İSVEÇ', lat: 59.33, lng: 18.07, region: 'AVRUPA' },
+  { name: 'NORVEÇ', lat: 59.91, lng: 10.75, region: 'AVRUPA' },
+  { name: 'RUSYA', lat: 55.76, lng: 37.62, region: 'AVRUPA', label: true },
+
+  { name: 'BAE', lat: 25.20, lng: 55.27, region: 'MEA', hub: true, label: true },
+  { name: 'MISIR', lat: 30.04, lng: 31.24, region: 'MEA', label: true },
+  { name: 'SUUDİ ARABİSTAN', lat: 24.71, lng: 46.68, region: 'MEA' },
+  { name: 'İSRAİL', lat: 32.09, lng: 34.78, region: 'MEA' },
+  { name: 'KATAR', lat: 25.29, lng: 51.53, region: 'MEA' },
+  { name: 'NİJERYA', lat: 6.52, lng: 3.38, region: 'MEA' },
+  { name: 'KENYA', lat: -1.29, lng: 36.82, region: 'MEA' },
+  { name: 'ETİYOPYA', lat: 9.03, lng: 38.74, region: 'MEA' },
+  { name: 'GÜNEY AFRİKA', lat: -26.20, lng: 28.05, region: 'MEA', label: true },
+  { name: 'GÜNEY AFRİKA', lat: -33.92, lng: 18.42, region: 'MEA' },
 
   { name: 'SİNGAPUR', lat: 1.35, lng: 103.82, region: 'ASYA', hub: true, label: true },
-  { name: 'ÇİN', lat: 35.9, lng: 104.2, region: 'ASYA', label: true },
-  { name: 'HİNDİSTAN', lat: 22.6, lng: 79.0, region: 'ASYA', label: true },
-  { name: 'JAPONYA', lat: 36.2, lng: 138.2, region: 'ASYA', label: true },
-  { name: 'GÜNEY KORE', lat: 36.4, lng: 127.9, region: 'ASYA' },
-  { name: 'ENDONEZYA', lat: -2.5, lng: 118.0, region: 'ASYA' },
+  { name: 'ÇİN', lat: 39.90, lng: 116.40, region: 'ASYA', label: true },
+  { name: 'ÇİN', lat: 31.23, lng: 121.47, region: 'ASYA' },
+  { name: 'ÇİN', lat: 22.54, lng: 114.06, region: 'ASYA' },
+  { name: 'HONG KONG', lat: 22.32, lng: 114.17, region: 'ASYA' },
+  { name: 'JAPONYA', lat: 35.68, lng: 139.69, region: 'ASYA', label: true },
+  { name: 'GÜNEY KORE', lat: 37.57, lng: 126.98, region: 'ASYA' },
+  { name: 'HİNDİSTAN', lat: 28.61, lng: 77.21, region: 'ASYA', label: true },
+  { name: 'HİNDİSTAN', lat: 19.08, lng: 72.88, region: 'ASYA' },
+  { name: 'HİNDİSTAN', lat: 12.97, lng: 77.59, region: 'ASYA' },
+  { name: 'TAYLAND', lat: 13.76, lng: 100.50, region: 'ASYA' },
+  { name: 'VİETNAM', lat: 21.03, lng: 105.85, region: 'ASYA' },
+  { name: 'ENDONEZYA', lat: -6.21, lng: 106.85, region: 'ASYA' },
+  { name: 'MALEZYA', lat: 3.14, lng: 101.69, region: 'ASYA' },
+  { name: 'FİLİPİNLER', lat: 14.60, lng: 120.98, region: 'ASYA' },
 
-  { name: 'AVUSTRALYA', lat: -25.3, lng: 133.8, region: 'OKYANUSYA', hub: true, label: true },
-  { name: 'YENİ ZELANDA', lat: -41.3, lng: 174.8, region: 'OKYANUSYA' },
+  { name: 'AVUSTRALYA', lat: -33.87, lng: 151.21, region: 'OKYANUSYA', hub: true, label: true },
+  { name: 'AVUSTRALYA', lat: -37.81, lng: 144.96, region: 'OKYANUSYA' },
+  { name: 'AVUSTRALYA', lat: -27.47, lng: 153.03, region: 'OKYANUSYA' },
+  { name: 'YENİ ZELANDA', lat: -36.85, lng: 174.76, region: 'OKYANUSYA' },
 ];
 
-const REGION_HUB = {
-  AMERİKA: 'ABD',
-  AVRUPA: 'ALMANYA',
-  MEA: 'BAE',
-  ASYA: 'SİNGAPUR',
-  OKYANUSYA: 'AVUSTRALYA',
-};
-
 const FILTERS = ['TÜMÜ', 'AMERİKA', 'AVRUPA', 'MEA', 'ASYA', 'OKYANUSYA', 'HUBLAR'];
-const LAND_PALETTE = ['#263f59', '#2b4864', '#314f6c', '#365773', '#29455f'];
 
 function normalizeName(value = '') {
   return value
@@ -67,23 +90,6 @@ function isTurkeyFeature(feature) {
   return name.includes('turkey') || name.includes('turkiye');
 }
 
-function landColor(feature) {
-  if (isTurkeyFeature(feature)) return '#a12f49';
-  const raw = feature?.properties?.name || '';
-  let hash = 0;
-  for (let i = 0; i < raw.length; i += 1) hash = (hash * 31 + raw.charCodeAt(i)) >>> 0;
-  return LAND_PALETTE[hash % LAND_PALETTE.length];
-}
-
-function rgba(hex, alpha) {
-  const clean = hex.replace('#', '');
-  const n = parseInt(clean, 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
 function useWindowSize() {
   const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
   useEffect(() => {
@@ -98,29 +104,35 @@ function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale,
   return (
     <div className="filter-wrap">
       <button className={`filter-button ${open ? 'active' : ''}`} onClick={() => setOpen((v) => !v)}>
-        <span className="filter-icon">⌘</span><span>FİLTRE</span>
+        <span className="filter-globe">◎</span>
+        <span>FİLTRELER</span>
+        <span className="filter-chevron">{open ? '⌃' : '⌄'}</span>
       </button>
       {open && (
         <div className="filter-panel">
-          <div className="filter-section-title">BÖLGE</div>
+          <div className="filter-title-row"><span>GÖRÜNÜM</span><i /></div>
           <div className="region-grid">
             {FILTERS.map((filter) => (
               <button key={filter} className={activeFilter === filter ? 'selected' : ''} onClick={() => setActiveFilter(filter)}>{filter}</button>
             ))}
           </div>
           <div className="control-row">
-            <div className="control-label"><span>ÜLKE İSİMLERİ</span><b>{Math.round(labelScale * 100)}%</b></div>
-            <input type="range" min="0.55" max="1.65" step="0.05" value={labelScale} onChange={(e) => setLabelScale(Number(e.target.value))} />
+            <div className="control-label"><span>Ülke isim boyutu</span><b>{Math.round(labelScale * 100)}%</b></div>
+            <input type="range" min="0.55" max="1.6" step="0.05" value={labelScale} onChange={(e) => setLabelScale(Number(e.target.value))} />
           </div>
           <div className="control-row">
-            <div className="control-label"><span>NODE BOYUTU</span><b>{Math.round(nodeScale * 100)}%</b></div>
-            <input type="range" min="0.65" max="1.7" step="0.05" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} />
+            <div className="control-label"><span>Node boyutu</span><b>{Math.round(nodeScale * 100)}%</b></div>
+            <input type="range" min="0.65" max="1.65" step="0.05" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} />
           </div>
           <div className="control-row">
-            <div className="control-label"><span>AKIŞ YOĞUNLUĞU</span><b>{flowDensity}</b></div>
+            <div className="control-label"><span>Veri akış yoğunluğu</span><b>{flowDensity * 20}%</b></div>
             <input type="range" min="1" max="5" step="1" value={flowDensity} onChange={(e) => setFlowDensity(Number(e.target.value))} />
           </div>
-          <div className="legend-row"><span><i className="legend-node normal" /> NODE</span><span><i className="legend-node hub" /> HUB</span><span><i className="legend-node turkey" /> TÜRKİYE</span></div>
+          <div className="legend-row">
+            <span><i className="legend-node normal" /> NODE</span>
+            <span><i className="legend-node hub" /> HUB</span>
+            <span><i className="legend-node turkey" /> TÜRKİYE</span>
+          </div>
         </div>
       )}
     </div>
@@ -130,28 +142,43 @@ function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale,
 function SpaceBackdrop() {
   return (
     <div className="space-backdrop">
-      <div className="space-dust space-dust-a" />
-      <div className="space-dust space-dust-b" />
+      <div className="milky-way milky-way-a" />
+      <div className="milky-way milky-way-b" />
       <div className="starfield starfield-a" />
       <div className="starfield starfield-b" />
       <div className="nebula nebula-a" />
       <div className="nebula nebula-b" />
       <div className="nebula nebula-c" />
+
+      <svg className="constellation constellation-ursa" viewBox="0 0 290 180" aria-hidden="true">
+        <path className="const-lines" d="M28 91 L69 54 L118 71 L115 116 L62 123 L28 91 M118 71 L178 47 L243 32" />
+        {[[28,91],[69,54],[118,71],[115,116],[62,123],[178,47],[243,32]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===2?3.2:2}/>) }
+      </svg>
+      <span className="const-name const-name-ursa">URSA MAJOR</span>
+
       <svg className="constellation constellation-orion" viewBox="0 0 220 220" aria-hidden="true">
         <path className="const-lines" d="M44 28 L80 90 L110 102 L139 94 L178 31 M80 90 L60 180 M139 94 L166 182" />
         {[[44,28],[178,31],[80,90],[110,102],[139,94],[60,180],[166,182]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===0||i===1?3:2}/>) }
       </svg>
-      <svg className="constellation constellation-dipper" viewBox="0 0 280 170" aria-hidden="true">
-        <path className="const-lines" d="M32 83 L71 48 L117 66 L114 111 L62 119 L32 83 M117 66 L174 45 L232 31" />
-        {[[32,83],[71,48],[117,66],[114,111],[62,119],[174,45],[232,31]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===2?3:2}/>) }
+      <span className="const-name const-name-orion">ORION</span>
+
+      <svg className="constellation constellation-scorpius" viewBox="0 0 240 180" aria-hidden="true">
+        <path className="const-lines" d="M25 34 C65 20, 92 43, 104 70 C116 96, 144 99, 158 119 C170 138, 184 151, 218 151" />
+        {[[25,34],[62,30],[96,61],[112,88],[143,101],[165,128],[195,148],[218,151]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===4?3:2}/>) }
       </svg>
-      <svg className="constellation constellation-cassiopeia" viewBox="0 0 240 110" aria-hidden="true">
-        <path className="const-lines" d="M15 34 L62 74 L112 24 L164 68 L220 23" />
-        {[[15,34],[62,74],[112,24],[164,68],[220,23]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===2?3:2}/>) }
+      <span className="const-name const-name-scorpius">SCORPIUS</span>
+
+      <svg className="constellation constellation-sagittarius" viewBox="0 0 250 170" aria-hidden="true">
+        <path className="const-lines" d="M30 86 L73 54 L117 72 L151 42 L183 79 L219 61 M117 72 L130 117 L177 128 L183 79" />
+        {[[30,86],[73,54],[117,72],[151,42],[183,79],[219,61],[130,117],[177,128]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===2?3:2}/>) }
       </svg>
+      <span className="const-name const-name-sagittarius">SAGITTARIUS</span>
+
       <div className="shooting-star shooting-star-a" />
       <div className="shooting-star shooting-star-b" />
       <div className="shooting-star shooting-star-c" />
+      <div className="planet planet-left" />
+      <div className="planet planet-right" />
     </div>
   );
 }
@@ -160,41 +187,49 @@ export default function App() {
   const globeRef = useRef();
   const { width, height } = useWindowSize();
   const [geojson, setGeojson] = useState({ features: [] });
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState('TÜMÜ');
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
-  const [flowDensity, setFlowDensity] = useState(3);
+  const [flowDensity, setFlowDensity] = useState(4);
 
   useEffect(() => {
     let active = true;
-    fetch(WORLD_URL).then((r) => r.json()).then((data) => active && setGeojson(data)).catch(() => {});
+    fetch(WORLD_URL)
+      .then((r) => r.json())
+      .then((data) => active && setGeojson(data))
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 
-  const visibleCountries = useMemo(() => {
-    if (activeFilter === 'TÜMÜ') return COUNTRIES;
-    if (activeFilter === 'HUBLAR') return COUNTRIES.filter((c) => c.hub || c.target);
-    return COUNTRIES.filter((c) => c.region === activeFilter || c.target);
+  const visibleNodes = useMemo(() => {
+    if (activeFilter === 'TÜMÜ') return NODES;
+    if (activeFilter === 'HUBLAR') return NODES.filter((node) => node.hub || node.target);
+    return NODES.filter((node) => node.region === activeFilter || node.target);
   }, [activeFilter]);
 
-  const arcs = useMemo(() => {
-    const byName = new Map(COUNTRIES.map((c) => [c.name, c]));
-    const result = [];
-    visibleCountries.forEach((country, index) => {
-      if (country.target) return;
-      if (country.hub) {
-        result.push({ from: country, to: byName.get('TÜRKİYE'), backbone: true, index });
-      } else {
-        const hub = byName.get(REGION_HUB[country.region]);
-        if (hub) result.push({ from: country, to: hub, backbone: false, index });
-      }
-    });
-    return result;
-  }, [visibleCountries]);
+  const flowNodes = useMemo(() => {
+    const candidates = visibleNodes.filter((node) => !node.target);
+    const ratio = Math.min(1, flowDensity / 5);
+    const limit = Math.max(1, Math.round(candidates.length * ratio));
+    return candidates.slice(0, limit);
+  }, [visibleNodes, flowDensity]);
 
-  const hubs = useMemo(() => visibleCountries.filter((c) => c.hub || c.target), [visibleCountries]);
-  const labels = useMemo(() => visibleCountries.filter((c) => c.label), [visibleCountries]);
+  const arcs = useMemo(() => flowNodes.map((node, index) => ({
+    from: node,
+    to: TURKEY,
+    hub: Boolean(node.hub),
+    index,
+  })), [flowNodes]);
+
+  const hubs = useMemo(() => visibleNodes.filter((node) => node.hub || node.target), [visibleNodes]);
+  const labels = useMemo(() => {
+    const unique = new Map();
+    visibleNodes.filter((node) => node.label).forEach((node) => {
+      if (!unique.has(node.name)) unique.set(node.name, node);
+    });
+    return [...unique.values()];
+  }, [visibleNodes]);
 
   const onReady = () => {
     const globe = globeRef.current;
@@ -202,35 +237,36 @@ export default function App() {
 
     const material = globe.globeMaterial?.();
     if (material) {
-      material.color = new THREE.Color('#07182b');
-      material.emissive = new THREE.Color('#020b16');
-      material.emissiveIntensity = 0.46;
-      material.roughness = 0.68;
-      material.metalness = 0.18;
+      material.color = new THREE.Color('#d9e6f1');
+      material.emissive = new THREE.Color('#07101a');
+      material.emissiveIntensity = 0.30;
+      material.roughness = 0.72;
+      material.metalness = 0.08;
+      if ('bumpScale' in material) material.bumpScale = 4.2;
     }
 
     const scene = globe.scene?.();
-    if (scene && !scene.userData.sgdbPremiumLights) {
-      const key = new THREE.DirectionalLight('#b8ddff', 1.35);
-      key.position.set(-180, 90, 240);
-      const rim = new THREE.PointLight('#1a83ff', 8, 600);
-      rim.position.set(220, -80, -180);
-      const fill = new THREE.HemisphereLight('#6baee8', '#02050a', 0.42);
-      scene.add(key, rim, fill);
-      scene.userData.sgdbPremiumLights = true;
+    if (scene && !scene.userData.referenceLights) {
+      const key = new THREE.DirectionalLight('#cde9ff', 1.25);
+      key.position.set(-170, 110, 240);
+      const blueRim = new THREE.PointLight('#2488ff', 12, 620);
+      blueRim.position.set(230, 20, -190);
+      const coolFill = new THREE.HemisphereLight('#b2d8ff', '#01040a', 0.40);
+      scene.add(key, blueRim, coolFill);
+      scene.userData.referenceLights = true;
     }
 
     const controls = globe.controls?.();
     if (controls) {
       controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.26;
+      controls.autoRotateSpeed = 0.20;
       controls.enableDamping = true;
       controls.dampingFactor = 0.055;
-      controls.minDistance = 165;
-      controls.maxDistance = 520;
+      controls.minDistance = 135;
+      controls.maxDistance = 430;
     }
 
-    globe.pointOfView?.({ lat: 24, lng: 22, altitude: 2.08 }, 0);
+    globe.pointOfView?.({ lat: 18, lng: 18, altitude: 1.67 }, 0);
   };
 
   return (
@@ -243,60 +279,68 @@ export default function App() {
           width={width}
           height={height}
           onGlobeReady={onReady}
+          globeImageUrl={EARTH_NIGHT}
+          bumpImageUrl={EARTH_BUMP}
+          backgroundImageUrl={SPACE_IMG}
           backgroundColor="rgba(0,0,0,0)"
           showAtmosphere
-          atmosphereColor="#5baeff"
-          atmosphereAltitude={0.17}
+          atmosphereColor="#69b8ff"
+          atmosphereAltitude={0.14}
           showGraticules={false}
 
           polygonsData={geojson.features}
-          polygonCapColor={landColor}
-          polygonSideColor={(d) => isTurkeyFeature(d) ? '#5a1426' : '#101c29'}
-          polygonStrokeColor={(d) => isTurkeyFeature(d) ? 'rgba(255,129,150,.95)' : 'rgba(154,201,230,.30)'}
-          polygonAltitude={(d) => isTurkeyFeature(d) ? 0.018 : 0.008}
-          polygonTransitionDuration={350}
+          polygonCapColor={(d) => isTurkeyFeature(d) ? 'rgba(190,31,58,.88)' : 'rgba(87,118,148,.18)'}
+          polygonSideColor={(d) => isTurkeyFeature(d) ? 'rgba(92,7,24,.88)' : 'rgba(12,25,38,.72)'}
+          polygonStrokeColor={(d) => isTurkeyFeature(d) ? 'rgba(255,118,139,.98)' : 'rgba(181,212,235,.36)'}
+          polygonAltitude={(d) => isTurkeyFeature(d) ? 0.014 : 0.0025}
+          polygonTransitionDuration={220}
 
-          pointsData={visibleCountries}
+          pointsData={visibleNodes}
           pointLat="lat"
           pointLng="lng"
-          pointAltitude={0.0015}
-          pointRadius={(d) => (d.target ? 0.16 : d.hub ? 0.125 : 0.075) * nodeScale}
-          pointColor={(d) => d.target ? '#ff4a66' : d.hub ? '#ffd36b' : '#4ff1b3'}
+          pointAltitude={0.006}
+          pointRadius={(d) => (d.target ? 0.24 : d.hub ? 0.17 : 0.070) * nodeScale}
+          pointColor={(d) => d.target ? '#ff3455' : d.hub ? '#ffc85a' : '#55ffad'}
           pointsMerge={false}
 
           ringsData={hubs}
           ringLat="lat"
           ringLng="lng"
-          ringAltitude={0.003}
-          ringColor={(d) => (t) => rgba(d.target ? '#ff4967' : '#ffd16a', Math.max(0, 0.68 * (1 - t)))}
-          ringMaxRadius={(d) => (d.target ? 2.6 : 1.55) * nodeScale}
-          ringPropagationSpeed={(d) => d.target ? 1.05 : 0.72}
-          ringRepeatPeriod={(d) => d.target ? 950 : 1450}
+          ringAltitude={0.008}
+          ringColor={(d) => () => d.target ? '#ff3858' : '#ffd06d'}
+          ringMaxRadius={(d) => (d.target ? 2.5 : 1.55) * nodeScale}
+          ringPropagationSpeed={(d) => d.target ? 0.85 : 0.62}
+          ringRepeatPeriod={(d) => d.target ? 900 : 1500}
 
           arcsData={arcs}
           arcStartLat={(d) => d.from.lat}
           arcStartLng={(d) => d.from.lng}
           arcEndLat={(d) => d.to.lat}
           arcEndLng={(d) => d.to.lng}
-          arcColor={(d) => d.backbone ? ['#8fffe7', '#ffd36b'] : ['#4df2b3', '#5caeff']}
-          arcAltitudeAutoScale={(d) => d.backbone ? 0.32 : 0.22}
-          arcStroke={(d) => d.backbone ? 0.46 : 0.24}
-          arcDashLength={(d) => d.backbone ? 0.28 : 0.15}
-          arcDashGap={(d) => d.backbone ? 0.08 : 0.1}
-          arcDashInitialGap={(d) => (d.index % Math.max(1, flowDensity)) * 0.055}
-          arcDashAnimateTime={(d) => d.backbone ? 1350 : 1850 - flowDensity * 90}
+          arcColor={(d) => d.hub ? ['#ffd06a', '#7bc8ff'] : ['#42a9ff', '#b8ecff']}
+          arcAltitudeAutoScale={(d) => d.hub ? 0.36 : 0.28}
+          arcStroke={(d) => d.hub ? 0.34 : 0.20}
+          arcDashLength={(d) => d.hub ? 0.18 : 0.105}
+          arcDashGap={(d) => d.hub ? 0.06 : 0.08}
+          arcDashInitialGap={(d) => (d.index * 0.079) % 1}
+          arcDashAnimateTime={(d) => d.hub ? 1150 : 1550}
+          arcsTransitionDuration={350}
 
           labelsData={labels}
           labelLat="lat"
           labelLng="lng"
           labelText="name"
-          labelAltitude={(d) => d.target ? 0.055 : 0.032}
-          labelSize={(d) => (d.target ? 0.66 : d.hub ? 0.50 : 0.42) * labelScale}
-          labelDotRadius={(d) => (d.target ? 0.10 : d.hub ? 0.075 : 0.052) * nodeScale}
-          labelColor={(d) => d.target ? 'rgba(255,195,205,.95)' : d.hub ? 'rgba(255,225,157,.88)' : 'rgba(204,232,244,.78)'}
-          labelResolution={2}
+          labelColor={(d) => d.target ? '#ffecf0' : d.hub ? '#fff3cf' : '#d8ebfa'}
+          labelSize={(d) => (d.target ? 1.20 : d.hub ? 0.78 : 0.60) * labelScale}
+          labelDotRadius={(d) => (d.target ? 0.28 : d.hub ? 0.18 : 0.09) * nodeScale}
+          labelAltitude={0.018}
+          labelResolution={3}
         />
       </div>
+
+      <div className="corner-status"><span className="status-ring"><i /></span></div>
+      <div className="coordinate-hud"><span className="crosshair">✦</span><span>39.9334° N&nbsp;&nbsp;32.8597° E</span></div>
+      <div className="right-ticks"><i /><i className="active" /><i /><i /></div>
 
       <FilterPanel
         open={filterOpen}
