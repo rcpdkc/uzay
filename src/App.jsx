@@ -1,470 +1,175 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Line, OrbitControls, Stars } from '@react-three/drei';
+import Globe from 'react-globe.gl';
 import * as THREE from 'three';
 
-const R = 2.58;
 const WORLD_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
 
 const COUNTRIES = [
-  { name: 'ABD', lat: 39.2, lon: -98.5, region: 'AMERİKA', label: true, flow: true, hub: true },
-  { name: 'KANADA', lat: 57.0, lon: -106.0, region: 'AMERİKA', label: true, flow: true },
-  { name: 'BREZİLYA', lat: -10.8, lon: -52.9, region: 'AMERİKA', label: true, flow: true, hub: true },
-  { name: 'ARJANTİN', lat: -38.4, lon: -63.6, region: 'AMERİKA', flow: true },
-  { name: 'İNGİLTERE', lat: 54.2, lon: -2.5, region: 'AVRUPA', label: true, flow: true, hub: true },
-  { name: 'FRANSA', lat: 46.4, lon: 2.2, region: 'AVRUPA', label: true, flow: true },
-  { name: 'ALMANYA', lat: 51.1, lon: 10.4, region: 'AVRUPA', label: true, flow: true, hub: true },
-  { name: 'İSPANYA', lat: 40.3, lon: -3.7, region: 'AVRUPA', flow: true },
-  { name: 'İTALYA', lat: 42.8, lon: 12.5, region: 'AVRUPA', flow: true },
-  { name: 'RUSYA', lat: 61.5, lon: 90.0, region: 'AVRUPA', label: true, flow: true },
-  { name: 'TÜRKİYE', lat: 39.0, lon: 35.0, region: 'MEA', label: true, target: true, hub: true },
-  { name: 'MISIR', lat: 26.8, lon: 30.8, region: 'MEA', label: true, flow: true },
-  { name: 'BAE', lat: 24.3, lon: 54.3, region: 'MEA', label: true, flow: true, hub: true },
-  { name: 'GÜNEY AFRİKA', lat: -30.6, lon: 22.9, region: 'MEA', label: true, flow: true },
-  { name: 'HİNDİSTAN', lat: 22.6, lon: 79.0, region: 'ASYA', label: true, flow: true },
-  { name: 'ÇİN', lat: 35.9, lon: 104.2, region: 'ASYA', label: true, flow: true },
-  { name: 'JAPONYA', lat: 36.2, lon: 138.2, region: 'ASYA', label: true, flow: true, hub: true },
-  { name: 'GÜNEY KORE', lat: 36.4, lon: 127.9, region: 'ASYA', flow: true },
-  { name: 'SİNGAPUR', lat: 1.35, lon: 103.82, region: 'ASYA', label: true, flow: true, hub: true },
-  { name: 'ENDONEZYA', lat: -2.5, lon: 118.0, region: 'ASYA', flow: true },
-  { name: 'AVUSTRALYA', lat: -25.3, lon: 133.8, region: 'OKYANUSYA', label: true, flow: true, hub: true },
-].map((country, index) => ({ ...country, index }));
+  { name: 'TÜRKİYE', lat: 39.0, lng: 35.0, region: 'MEA', target: true, hub: true, label: true },
+  { name: 'ABD', lat: 39.2, lng: -98.5, region: 'AMERİKA', hub: true, label: true },
+  { name: 'KANADA', lat: 57.0, lng: -106.0, region: 'AMERİKA', label: true },
+  { name: 'MEKSİKA', lat: 23.6, lng: -102.5, region: 'AMERİKA', label: false },
+  { name: 'BREZİLYA', lat: -10.8, lng: -52.9, region: 'AMERİKA', label: true },
+  { name: 'ARJANTİN', lat: -38.4, lng: -63.6, region: 'AMERİKA', label: false },
 
-const TURKEY = COUNTRIES.find((country) => country.target);
-const FILTERS = ['TÜMÜ', 'AMERİKA', 'AVRUPA', 'MEA', 'ASYA', 'OKYANUSYA', 'HUBLAR'];
+  { name: 'ALMANYA', lat: 51.1, lng: 10.4, region: 'AVRUPA', hub: true, label: true },
+  { name: 'İNGİLTERE', lat: 54.2, lng: -2.5, region: 'AVRUPA', label: true },
+  { name: 'FRANSA', lat: 46.4, lng: 2.2, region: 'AVRUPA', label: true },
+  { name: 'İSPANYA', lat: 40.3, lng: -3.7, region: 'AVRUPA', label: false },
+  { name: 'İTALYA', lat: 42.8, lng: 12.5, region: 'AVRUPA', label: false },
+  { name: 'HOLLANDA', lat: 52.2, lng: 5.3, region: 'AVRUPA', label: false },
+  { name: 'İSVEÇ', lat: 62.0, lng: 15.0, region: 'AVRUPA', label: false },
+  { name: 'POLONYA', lat: 52.1, lng: 19.4, region: 'AVRUPA', label: false },
+  { name: 'RUSYA', lat: 61.5, lng: 90.0, region: 'AVRUPA', label: true },
 
-function latLonToVec3(lat, lon, radius = R) {
-  const phi = (90 - lat) * Math.PI / 180;
-  const theta = (lon + 180) * Math.PI / 180;
-  return new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta),
-  );
-}
+  { name: 'BAE', lat: 24.3, lng: 54.3, region: 'MEA', hub: true, label: true },
+  { name: 'MISIR', lat: 26.8, lng: 30.8, region: 'MEA', label: true },
+  { name: 'SUUDİ ARABİSTAN', lat: 23.9, lng: 45.1, region: 'MEA', label: false },
+  { name: 'GÜNEY AFRİKA', lat: -30.6, lng: 22.9, region: 'MEA', label: true },
+  { name: 'NİJERYA', lat: 9.1, lng: 8.7, region: 'MEA', label: false },
+  { name: 'KENYA', lat: 0.1, lng: 37.9, region: 'MEA', label: false },
 
-function surfaceQuaternion(position) {
-  return new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 0, 1),
-    position.clone().normalize(),
-  );
-}
+  { name: 'SİNGAPUR', lat: 1.35, lng: 103.82, region: 'ASYA', hub: true, label: true },
+  { name: 'ÇİN', lat: 35.9, lng: 104.2, region: 'ASYA', label: true },
+  { name: 'HİNDİSTAN', lat: 22.6, lng: 79.0, region: 'ASYA', label: true },
+  { name: 'JAPONYA', lat: 36.2, lng: 138.2, region: 'ASYA', label: true },
+  { name: 'GÜNEY KORE', lat: 36.4, lng: 127.9, region: 'ASYA', label: false },
+  { name: 'ENDONEZYA', lat: -2.5, lng: 118.0, region: 'ASYA', label: false },
+  { name: 'TAYLAND', lat: 15.9, lng: 100.9, region: 'ASYA', label: false },
 
-function drawRingPath(ctx, ring, width, height) {
-  if (!ring || ring.length < 2) return;
-  let started = false;
-  let prevLon = null;
-  for (const [lon, lat] of ring) {
-    const x = ((lon + 180) / 360) * width;
-    const y = ((90 - lat) / 180) * height;
-    if (!started || (prevLon !== null && Math.abs(lon - prevLon) > 180)) {
-      ctx.moveTo(x, y);
-      started = true;
-    } else {
-      ctx.lineTo(x, y);
-    }
-    prevLon = lon;
-  }
-  ctx.closePath();
-}
+  { name: 'AVUSTRALYA', lat: -25.3, lng: 133.8, region: 'OKYANUSYA', hub: true, label: true },
+  { name: 'YENİ ZELANDA', lat: -41.3, lng: 174.8, region: 'OKYANUSYA', label: false },
+];
 
-function makeWorldTexture(geojson) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 2048;
-  canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
-  const { width, height } = canvas;
+const FILTERS = [
+  { id: 'TÜMÜ', label: 'TÜMÜ' },
+  { id: 'AMERİKA', label: 'AMERİKA' },
+  { id: 'AVRUPA', label: 'AVRUPA' },
+  { id: 'MEA', label: 'ORTADOĞU & AFRİKA' },
+  { id: 'ASYA', label: 'ASYA' },
+  { id: 'OKYANUSYA', label: 'OKYANUSYA' },
+  { id: 'HUBLAR', label: 'HUBLAR' },
+];
 
-  const ocean = ctx.createRadialGradient(width * 0.45, height * 0.42, 30, width * 0.5, height * 0.5, width * 0.7);
-  ocean.addColorStop(0, '#0a3340');
-  ocean.addColorStop(0.45, '#072731');
-  ocean.addColorStop(1, '#03131c');
-  ctx.fillStyle = ocean;
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.globalAlpha = 0.18;
-  for (let y = 0; y < height; y += 36) {
-    ctx.strokeStyle = '#2f7a8a';
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y + 18);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  geojson.features.forEach((feature, featureIndex) => {
-    if (!feature.geometry) return;
-    const name = feature.properties?.name || '';
-    const isTurkey = /turkey|türkiye/i.test(name);
-    const polygons = feature.geometry.type === 'Polygon'
-      ? [feature.geometry.coordinates]
-      : feature.geometry.coordinates;
-
-    polygons.forEach((polygon) => {
-      ctx.beginPath();
-      polygon.forEach((ring) => drawRingPath(ctx, ring, width, height));
-      const alt = featureIndex % 4;
-      ctx.fillStyle = isTurkey
-        ? '#c92f4a'
-        : ['#0b4a48', '#0b4143', '#0d5050', '#0b4547'][alt];
-      ctx.fill('evenodd');
-      ctx.strokeStyle = isTurkey ? '#ff8090' : '#4aa6a0';
-      ctx.lineWidth = isTurkey ? 3.2 : 1.15;
-      ctx.stroke();
-    });
-  });
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function useWorldTexture() {
-  const [texture, setTexture] = useState(null);
-  useEffect(() => {
-    let active = true;
-    fetch(WORLD_URL)
-      .then((r) => r.json())
-      .then((geojson) => {
-        if (!active) return;
-        setTexture(makeWorldTexture(geojson));
-      })
-      .catch(() => {});
-    return () => { active = false; };
-  }, []);
-  return texture;
-}
-
-function buildGraticule() {
-  const lines = [];
-  for (let lat = -60; lat <= 60; lat += 20) {
-    const points = [];
-    for (let lon = -180; lon <= 180; lon += 4) points.push(latLonToVec3(lat, lon, R + 0.004));
-    lines.push(points);
-  }
-  for (let lon = -180; lon < 180; lon += 20) {
-    const points = [];
-    for (let lat = -84; lat <= 84; lat += 4) points.push(latLonToVec3(lat, lon, R + 0.004));
-    lines.push(points);
-  }
-  return lines;
-}
-
-function Graticule() {
-  const lines = useMemo(buildGraticule, []);
-  return lines.map((points, i) => (
-    <Line key={i} points={points} color="#3b939c" lineWidth={0.22} transparent opacity={0.13} depthWrite={false} />
-  ));
-}
-
-function makeLabelTexture(text, target = false, hub = false) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 512, 128);
-  ctx.font = target ? '700 40px Arial' : '600 31px Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowBlur = target ? 18 : 10;
-  ctx.shadowColor = target ? '#ff304f' : hub ? '#ffd76a' : '#23e6a1';
-  ctx.fillStyle = target ? '#ff7a8c' : hub ? '#ffe7a4' : '#c6fff0';
-  ctx.fillText(text, 256, 64);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
-function CountryLabel({ country, labelScale }) {
-  const position = useMemo(() => latLonToVec3(country.lat, country.lon, R + 0.105), [country]);
-  const texture = useMemo(() => makeLabelTexture(country.name, country.target, country.hub), [country]);
-  useEffect(() => () => texture.dispose(), [texture]);
-  const base = country.target ? 0.72 : 0.54;
-  return (
-    <sprite position={position} scale={[base * labelScale, base * 0.25 * labelScale, 1]}>
-      <spriteMaterial map={texture} transparent depthTest depthWrite={false} opacity={0.95} toneMapped={false} />
-    </sprite>
-  );
-}
-
-function CountryNode({ country, nodeScale }) {
-  const ringRef = useRef();
-  const beaconRef = useRef();
-  const position = useMemo(() => latLonToVec3(country.lat, country.lon, R + 0.012), [country]);
-  const quaternion = useMemo(() => surfaceQuaternion(position), [position]);
-
-  useFrame(({ clock }) => {
-    const pulse = 1 + Math.sin(clock.getElapsedTime() * 2.4 + country.index * 0.55) * 0.16;
-    if (ringRef.current) ringRef.current.scale.setScalar(pulse);
-    if (beaconRef.current) beaconRef.current.scale.z = 0.75 + Math.sin(clock.getElapsedTime() * 2 + country.index) * 0.18;
-  });
-
-  const target = country.target;
-  const hub = country.hub && !target;
-  const core = target ? '#ff2848' : hub ? '#ffd35f' : '#24f09b';
-  const glow = target ? '#ff4560' : hub ? '#ffe58c' : '#2affe0';
-  const baseRadius = target ? 0.048 : hub ? 0.026 : 0.018;
-
-  return (
-    <group position={position} quaternion={quaternion} scale={nodeScale}>
-      <mesh>
-        <circleGeometry args={[baseRadius, 24]} />
-        <meshBasicMaterial color={core} side={THREE.DoubleSide} toneMapped={false} />
-      </mesh>
-      <mesh ref={ringRef} position={[0, 0, 0.004]}>
-        <ringGeometry args={[baseRadius * 1.5, baseRadius * 2.25, 32]} />
-        <meshBasicMaterial color={glow} transparent opacity={hub ? 0.45 : 0.28} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-      </mesh>
-      {hub && (
-        <mesh ref={beaconRef} position={[0, 0, 0.035]}>
-          <cylinderGeometry args={[0.006, 0.014, 0.09, 8]} />
-          <meshBasicMaterial color="#ffe799" transparent opacity={0.8} toneMapped={false} />
-        </mesh>
-      )}
-    </group>
-  );
-}
-
-function DataFlow({ country, index, density }) {
-  const start = useMemo(() => latLonToVec3(country.lat, country.lon, R + 0.018), [country]);
-  const end = useMemo(() => latLonToVec3(TURKEY.lat, TURKEY.lon, R + 0.024), []);
-  const curve = useMemo(() => {
-    const distance = start.distanceTo(end);
-    const lift = 0.42 + Math.min(distance * 0.19, 1.05);
-    const midpoint = start.clone().add(end).multiplyScalar(0.5).normalize().multiplyScalar(R + lift);
-    return new THREE.QuadraticBezierCurve3(start, midpoint, end);
-  }, [start, end]);
-  const points = useMemo(() => curve.getPoints(120), [curve]);
-  const packetRefs = useRef([]);
-  const packetCount = Math.max(2, Math.min(7, density + 2));
-
-  useFrame(({ clock }) => {
-    const elapsed = clock.getElapsedTime();
-    const speed = 0.095 + (index % 4) * 0.009;
-    for (let packetIndex = 0; packetIndex < packetCount; packetIndex += 1) {
-      const ref = packetRefs.current[packetIndex];
-      if (!ref) continue;
-      const t = (elapsed * speed + index * 0.057 + packetIndex / packetCount) % 1;
-      ref.position.copy(curve.getPoint(t));
-    }
-  });
-
-  return (
-    <group>
-      <Line points={points} color="#0a8179" lineWidth={1.15} transparent opacity={0.18 + density * 0.02} depthWrite={false} />
-      <Line points={points} color="#22e9b1" lineWidth={0.5} transparent opacity={0.56} depthWrite={false} />
-      <Line points={points} color="#b8ffed" lineWidth={0.14} transparent opacity={0.85} depthWrite={false} />
-      {Array.from({ length: packetCount }).map((_, packetIndex) => (
-        <group ref={(node) => { packetRefs.current[packetIndex] = node; }} key={packetIndex}>
-          <mesh>
-            <sphereGeometry args={[packetIndex === 0 ? 0.022 : 0.013, 10, 10]} />
-            <meshBasicMaterial color={packetIndex === 0 ? '#effff9' : '#2affba'} toneMapped={false} />
-          </mesh>
-          <mesh>
-            <sphereGeometry args={[packetIndex === 0 ? 0.055 : 0.032, 8, 8]} />
-            <meshBasicMaterial color="#20f0ac" transparent opacity={0.08} depthWrite={false} toneMapped={false} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
-
-const ORION = {
-  stars: [
-    [-1.08, 1.08, 0, 0.052], [0.96, 1.18, 0, 0.045], [-0.58, 0.18, 0, 0.038],
-    [0, 0.08, 0, 0.033], [0.56, 0.02, 0, 0.04], [-0.92, -1.05, 0, 0.049], [0.84, -1.16, 0, 0.044],
-  ],
-  links: [[0,2],[1,4],[2,3],[3,4],[2,5],[4,6]],
-};
-const BIG_DIPPER = {
-  stars: [
-    [-1.35,.42,0,.045],[-.58,.73,0,.038],[.08,.37,0,.05],[.04,-.37,0,.041],
-    [-.82,-.45,0,.039],[-1.48,-.05,0,.046],[.82,.6,0,.037],[1.5,.75,0,.05],
-  ],
-  links: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[2,6],[6,7]],
-};
-const CASSIOPEIA = {
-  stars: [[-1.35,.35,0,.04],[-.68,-.2,0,.052],[0,.5,0,.038],[.72,-.08,0,.048],[1.38,.5,0,.043]],
-  links: [[0,1],[1,2],[2,3],[3,4]],
+const HUB_BY_REGION = {
+  AMERİKA: 'ABD',
+  AVRUPA: 'ALMANYA',
+  MEA: 'BAE',
+  ASYA: 'SİNGAPUR',
+  OKYANUSYA: 'AVUSTRALYA',
 };
 
-function Constellation({ data, position, scale = 1, rotation = [0,0,0] }) {
+function isTurkeyFeature(feature) {
+  const name = String(feature?.properties?.name || '').toLowerCase();
+  return name === 'turkey' || name.includes('türkiye');
+}
+
+function hashString(value = '') {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+
+function SpaceBackdrop() {
   return (
-    <group position={position} scale={scale} rotation={rotation}>
-      {data.links.map(([a,b], i) => (
-        <Line key={`l-${i}`} points={[data.stars[a], data.stars[b]]} color="#8ebeff" lineWidth={0.24} transparent opacity={0.11} depthWrite={false} />
-      ))}
-      {data.stars.map(([x,y,z,size], i) => (
-        <group key={`s-${i}`} position={[x,y,z]}>
-          <mesh><sphereGeometry args={[size, 8, 8]} /><meshBasicMaterial color="#eef7ff" toneMapped={false} /></mesh>
-          <mesh><sphereGeometry args={[size * 2.8, 8, 8]} /><meshBasicMaterial color="#6caaff" transparent opacity={0.05} depthWrite={false} toneMapped={false} /></mesh>
-        </group>
-      ))}
-    </group>
+    <div className="space-backdrop" aria-hidden="true">
+      <div className="starfield starfield-a" />
+      <div className="starfield starfield-b" />
+      <div className="nebula nebula-a" />
+      <div className="nebula nebula-b" />
+      <div className="nebula nebula-c" />
+
+      <svg className="constellation constellation-orion" viewBox="0 0 260 220">
+        <g className="const-lines">
+          <path d="M54 46 L100 92 L130 105 L160 97 L207 43" />
+          <path d="M100 92 L76 177" />
+          <path d="M160 97 L190 184" />
+        </g>
+        {[ [54,46,3.2], [207,43,2.7], [100,92,2.4], [130,105,2.1], [160,97,2.6], [76,177,3.1], [190,184,3.4] ].map(([cx,cy,r], i) => (
+          <circle key={i} cx={cx} cy={cy} r={r} />
+        ))}
+      </svg>
+
+      <svg className="constellation constellation-dipper" viewBox="0 0 300 170">
+        <g className="const-lines">
+          <path d="M42 86 L88 52 L138 68 L142 116 L91 126 L42 86" />
+          <path d="M138 68 L206 48 L264 37" />
+        </g>
+        {[ [42,86,2.5], [88,52,3.2], [138,68,2.5], [142,116,2.2], [91,126,2.9], [206,48,2.6], [264,37,3.1] ].map(([cx,cy,r], i) => (
+          <circle key={i} cx={cx} cy={cy} r={r} />
+        ))}
+      </svg>
+
+      <svg className="constellation constellation-cassiopeia" viewBox="0 0 270 130">
+        <path className="const-lines" d="M24 43 L76 89 L134 31 L194 83 L246 40" />
+        {[ [24,43,2.4], [76,89,3.1], [134,31,2.8], [194,83,2.5], [246,40,3.0] ].map(([cx,cy,r], i) => (
+          <circle key={i} cx={cx} cy={cy} r={r} />
+        ))}
+      </svg>
+
+      <span className="shooting-star shooting-star-a" />
+      <span className="shooting-star shooting-star-b" />
+      <span className="shooting-star shooting-star-c" />
+    </div>
   );
 }
 
-function ShootingStar({ start, end, period, delay, trail = 1 }) {
-  const group = useRef();
-  const direction = useMemo(() => new THREE.Vector3().subVectors(new THREE.Vector3(...end), new THREE.Vector3(...start)).normalize(), [start, end]);
-  const tailPoint = useMemo(() => direction.clone().multiplyScalar(-trail).toArray(), [direction, trail]);
-
-  useFrame(({ clock }) => {
-    if (!group.current) return;
-    const elapsed = clock.getElapsedTime() + delay;
-    const cycle = (elapsed % period) / period;
-    const activeLength = 0.16;
-    if (cycle > activeLength) {
-      group.current.visible = false;
-      return;
-    }
-    group.current.visible = true;
-    const t = cycle / activeLength;
-    group.current.position.lerpVectors(new THREE.Vector3(...start), new THREE.Vector3(...end), t);
-  });
-
-  return (
-    <group ref={group} visible={false}>
-      <Line points={[[0,0,0], tailPoint]} color="#dcefff" lineWidth={0.65} transparent opacity={0.7} depthWrite={false} />
-      <mesh><sphereGeometry args={[0.035, 8, 8]} /><meshBasicMaterial color="#ffffff" toneMapped={false} /></mesh>
-      <mesh><sphereGeometry args={[0.11, 8, 8]} /><meshBasicMaterial color="#90c9ff" transparent opacity={0.08} depthWrite={false} toneMapped={false} /></mesh>
-    </group>
-  );
-}
-
-function DeepSpace() {
-  return (
-    <group>
-      <Stars radius={150} depth={110} count={16000} factor={2.5} saturation={0.14} fade speed={0.025} />
-      <Stars radius={70} depth={46} count={4200} factor={1.15} saturation={0} fade speed={0.012} />
-      <Constellation data={ORION} position={[-8.5, 2.6, -11]} scale={1.08} rotation={[.1,.25,-.2]} />
-      <Constellation data={BIG_DIPPER} position={[7.6, 3.2, -12]} scale={1.08} rotation={[-.1,-.3,.18]} />
-      <Constellation data={CASSIOPEIA} position={[6.7, -3.6, -10]} scale={.92} rotation={[.2,.15,-.1]} />
-      <ShootingStar start={[-7, 4, -4]} end={[5, -1, -7]} period={11} delay={1.5} trail={1.6} />
-      <ShootingStar start={[8, 2.5, -8]} end={[-2, -2, -6]} period={17} delay={5.2} trail={1.2} />
-      <ShootingStar start={[-3, 5, -10]} end={[7, 1, -9]} period={23} delay={9.5} trail={1.4} />
-    </group>
-  );
-}
-
-function Globe({ activeFilter, labelScale, nodeScale, flowDensity }) {
-  const group = useRef();
-  const worldTexture = useWorldTexture();
-
-  const visibleCountries = useMemo(() => {
-    if (activeFilter === 'TÜMÜ') return COUNTRIES;
-    if (activeFilter === 'HUBLAR') return COUNTRIES.filter((c) => c.hub || c.target);
-    return COUNTRIES.filter((c) => c.region === activeFilter || c.target);
-  }, [activeFilter]);
-
-  const visibleFlows = useMemo(
-    () => visibleCountries.filter((c) => c.flow && !c.target),
-    [visibleCountries],
-  );
-
-  useFrame((_, delta) => {
-    if (group.current) group.current.rotation.y += delta * 0.022;
-  });
-
-  return (
-    <group ref={group} rotation={[0.08, -0.58, -0.02]}>
-      <mesh>
-        <sphereGeometry args={[R, 128, 128]} />
-        <meshStandardMaterial
-          map={worldTexture || null}
-          color={worldTexture ? '#ffffff' : '#0b3338'}
-          roughness={0.68}
-          metalness={0.12}
-          emissive="#062129"
-          emissiveIntensity={0.38}
-        />
-      </mesh>
-      <Graticule />
-      {visibleCountries.map((country) => <CountryNode key={country.name} country={country} nodeScale={nodeScale} />)}
-      {visibleFlows.map((country, index) => <DataFlow key={country.name} country={country} index={index} density={flowDensity} />)}
-      {visibleCountries.filter((c) => c.label).map((country) => <CountryLabel key={`label-${country.name}`} country={country} labelScale={labelScale} />)}
-      <mesh>
-        <sphereGeometry args={[R + 0.105, 96, 96]} />
-        <meshBasicMaterial color="#35c9e0" transparent opacity={0.035} side={THREE.BackSide} depthWrite={false} />
-      </mesh>
-    </group>
-  );
-}
-
-function Scene({ activeFilter, labelScale, nodeScale, flowDensity }) {
-  return (
-    <Canvas
-      camera={{ position: [0, 0.04, 7.25], fov: 40 }}
-      dpr={[1, 1.8]}
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      style={{ width: '100%', height: '100%', background: 'transparent' }}
-    >
-      <fog attach="fog" args={["#02060b", 18, 52]} />
-      <ambientLight intensity={0.72} />
-      <hemisphereLight intensity={0.5} color="#9be7ff" groundColor="#021018" />
-      <directionalLight position={[5, 3, 6]} intensity={2.15} color="#d0f4ff" />
-      <pointLight position={[-5, -1, 4]} intensity={18} distance={13} color="#0b61ff" />
-      <pointLight position={[4, 2, -3]} intensity={12} distance={11} color="#00d69a" />
-      <DeepSpace />
-      <Globe activeFilter={activeFilter} labelScale={labelScale} nodeScale={nodeScale} flowDensity={flowDensity} />
-      <OrbitControls
-        enablePan={false}
-        enableZoom
-        enableRotate
-        minDistance={4.65}
-        maxDistance={10.5}
-        rotateSpeed={0.52}
-        zoomSpeed={0.58}
-        dampingFactor={0.045}
-        enableDamping
-      />
-    </Canvas>
-  );
-}
-
-function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale, setLabelScale, nodeScale, setNodeScale, flowDensity, setFlowDensity }) {
+function FilterPanel({
+  open,
+  setOpen,
+  activeFilter,
+  setActiveFilter,
+  labelScale,
+  setLabelScale,
+  nodeScale,
+  setNodeScale,
+  flowDensity,
+  setFlowDensity,
+}) {
   return (
     <div className="filter-wrap">
-      <button className={`filter-button ${open ? 'active' : ''}`} onClick={() => setOpen((v) => !v)} aria-label="Filtreleri aç">
-        <span className="filter-icon">⌘</span>
+      <button className={`filter-button ${open ? 'active' : ''}`} onClick={() => setOpen((v) => !v)}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6h16M7 12h10M10 18h4" />
+        </svg>
         <span>FİLTRE</span>
       </button>
 
       {open && (
         <div className="filter-panel">
-          <div className="filter-section-title">BÖLGE</div>
+          <div className="filter-title">BÖLGE</div>
           <div className="region-grid">
-            {FILTERS.map((filter) => (
+            {FILTERS.map((item) => (
               <button
-                key={filter}
-                className={activeFilter === filter ? 'selected' : ''}
-                onClick={() => setActiveFilter(filter)}
+                key={item.id}
+                className={activeFilter === item.id ? 'selected' : ''}
+                onClick={() => setActiveFilter(item.id)}
               >
-                {filter}
+                {item.label}
               </button>
             ))}
           </div>
 
           <div className="control-row">
-            <div className="control-label"><span>ÜLKE İSİMLERİ</span><b>{Math.round(labelScale * 100)}%</b></div>
-            <input type="range" min="0.55" max="1.65" step="0.05" value={labelScale} onChange={(e) => setLabelScale(Number(e.target.value))} />
+            <div className="control-head"><span>ÜLKE İSİMLERİ</span><b>{Math.round(labelScale * 100)}%</b></div>
+            <input type="range" min="0.55" max="1.6" step="0.05" value={labelScale} onChange={(e) => setLabelScale(Number(e.target.value))} />
           </div>
 
           <div className="control-row">
-            <div className="control-label"><span>NODE BOYUTU</span><b>{Math.round(nodeScale * 100)}%</b></div>
-            <input type="range" min="0.65" max="1.7" step="0.05" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} />
+            <div className="control-head"><span>NODE BOYUTU</span><b>{Math.round(nodeScale * 100)}%</b></div>
+            <input type="range" min="0.6" max="1.6" step="0.05" value={nodeScale} onChange={(e) => setNodeScale(Number(e.target.value))} />
           </div>
 
           <div className="control-row">
-            <div className="control-label"><span>AKIŞ YOĞUNLUĞU</span><b>{flowDensity}</b></div>
+            <div className="control-head"><span>AKIŞ YOĞUNLUĞU</span><b>{flowDensity}</b></div>
             <input type="range" min="1" max="5" step="1" value={flowDensity} onChange={(e) => setFlowDensity(Number(e.target.value))} />
           </div>
 
-          <div className="hub-legend"><span className="hub-dot" /> HUB NODE</div>
+          <div className="legend-row">
+            <span><i className="legend-dot normal" />NODE</span>
+            <span><i className="legend-dot hub" />HUB</span>
+            <span><i className="legend-dot core" />TÜRKİYE</span>
+          </div>
         </div>
       )}
     </div>
@@ -472,20 +177,202 @@ function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale,
 }
 
 export default function App() {
+  const hostRef = useRef(null);
+  const globeRef = useRef(null);
+  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [geojson, setGeojson] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('TÜMÜ');
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
   const [flowDensity, setFlowDensity] = useState(3);
 
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize({ width: Math.max(1, Math.floor(width)), height: Math.max(1, Math.floor(height)) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch(WORLD_URL)
+      .then((r) => r.json())
+      .then((data) => { if (active) setGeojson(data); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const oceanMaterial = useMemo(() => new THREE.MeshPhongMaterial({
+    color: '#082331',
+    emissive: '#03121a',
+    emissiveIntensity: 0.38,
+    shininess: 26,
+    specular: new THREE.Color('#2b7389'),
+  }), []);
+
+  useEffect(() => () => oceanMaterial.dispose(), [oceanMaterial]);
+
+  const visibleCountries = useMemo(() => {
+    if (activeFilter === 'TÜMÜ') return COUNTRIES;
+    if (activeFilter === 'HUBLAR') return COUNTRIES.filter((c) => c.hub || c.target);
+    return COUNTRIES.filter((c) => c.region === activeFilter || c.target);
+  }, [activeFilter]);
+
+  const arcs = useMemo(() => {
+    const result = [];
+    let idx = 0;
+
+    if (activeFilter !== 'HUBLAR') {
+      visibleCountries.forEach((country) => {
+        if (country.target || country.hub) return;
+        const hubName = HUB_BY_REGION[country.region];
+        const hub = COUNTRIES.find((c) => c.name === hubName);
+        if (!hub) return;
+        result.push({
+          id: `${country.name}-${hub.name}`,
+          startLat: country.lat,
+          startLng: country.lng,
+          endLat: hub.lat,
+          endLng: hub.lng,
+          kind: 'edge',
+          idx: idx++,
+        });
+      });
+    }
+
+    const visibleHubNames = new Set(visibleCountries.filter((c) => c.hub && !c.target).map((c) => c.name));
+    COUNTRIES.filter((c) => c.hub && !c.target && visibleHubNames.has(c.name)).forEach((hub) => {
+      const turkey = COUNTRIES[0];
+      result.push({
+        id: `${hub.name}-TÜRKİYE`,
+        startLat: hub.lat,
+        startLng: hub.lng,
+        endLat: turkey.lat,
+        endLng: turkey.lng,
+        kind: 'backbone',
+        idx: idx++,
+      });
+    });
+
+    return result;
+  }, [visibleCountries, activeFilter]);
+
+  const rings = useMemo(
+    () => visibleCountries.filter((c) => c.hub || c.target),
+    [visibleCountries],
+  );
+
+  const labels = useMemo(
+    () => visibleCountries.filter((c) => c.label || c.hub || c.target),
+    [visibleCountries],
+  );
+
+  const polygons = geojson?.features || [];
+  const landPalette = ['#19393a', '#1b3f3e', '#173536', '#204443'];
+
+  const onGlobeReady = () => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const controls = globe.controls();
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.32;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+
+    const ambient = new THREE.AmbientLight('#7fc7df', 1.1);
+    const key = new THREE.DirectionalLight('#d6f4ff', 2.4);
+    key.position.set(180, 110, 220);
+    const rim = new THREE.DirectionalLight('#2d86b0', 1.0);
+    rim.position.set(-180, -50, -160);
+    globe.lights([ambient, key, rim]);
+
+    globe.pointOfView({ lat: 22, lng: 28, altitude: 2.0 }, 900);
+  };
+
   return (
     <main className="space-shell">
-      <div className="nebula nebula-a" />
-      <div className="nebula nebula-b" />
-      <div className="nebula nebula-c" />
-      <div className="scene-layer">
-        <Scene activeFilter={activeFilter} labelScale={labelScale} nodeScale={nodeScale} flowDensity={flowDensity} />
+      <SpaceBackdrop />
+
+      <div className="globe-host" ref={hostRef}>
+        <Globe
+          ref={globeRef}
+          width={size.width}
+          height={size.height}
+          backgroundColor="rgba(0,0,0,0)"
+          globeOffset={[0, 0]}
+          animateIn
+          globeMaterial={oceanMaterial}
+          showAtmosphere
+          atmosphereColor="#49c9ef"
+          atmosphereAltitude={0.11}
+          showGraticules={false}
+          polygonsData={polygons}
+          polygonAltitude={(feature) => (isTurkeyFeature(feature) ? 0.012 : 0.005)}
+          polygonCapColor={(feature) => {
+            if (isTurkeyFeature(feature)) return '#8d2942';
+            const name = String(feature?.properties?.name || '');
+            return landPalette[hashString(name) % landPalette.length];
+          }}
+          polygonSideColor={() => '#071419'}
+          polygonStrokeColor={(feature) => (isTurkeyFeature(feature) ? '#ff6f86' : '#4c8785')}
+          polygonLabel={(feature) => feature?.properties?.name || ''}
+          polygonsTransitionDuration={0}
+          pointsData={visibleCountries}
+          pointLat="lat"
+          pointLng="lng"
+          pointAltitude={() => 0.001}
+          pointRadius={(d) => {
+            const base = d.target ? 0.16 : d.hub ? 0.12 : 0.065;
+            return base * nodeScale;
+          }}
+          pointResolution={20}
+          pointColor={(d) => (d.target ? '#ff4965' : d.hub ? '#e7b65f' : '#32f0a4')}
+          pointLabel={(d) => d.name}
+          pointsTransitionDuration={250}
+          ringsData={rings}
+          ringLat="lat"
+          ringLng="lng"
+          ringAltitude={() => 0.002}
+          ringColor={(d) => (d.target ? '#ff4965' : '#e7b65f')}
+          ringMaxRadius={(d) => (d.target ? 2.6 : 1.65)}
+          ringPropagationSpeed={(d) => (d.target ? 1.0 : 0.72)}
+          ringRepeatPeriod={(d) => (d.target ? 1250 : 1850)}
+          arcsData={arcs}
+          arcStartLat="startLat"
+          arcStartLng="startLng"
+          arcEndLat="endLat"
+          arcEndLng="endLng"
+          arcColor={(d) => (d.kind === 'backbone' ? ['#f2bf68', '#54f3cc'] : ['#2df0ad', '#2b6c76'])}
+          arcAltitude={(d) => (d.kind === 'backbone' ? 0.24 : 0.13)}
+          arcStroke={(d) => (d.kind === 'backbone' ? 0.62 : 0.28)}
+          arcDashLength={() => 0.075 + flowDensity * 0.025}
+          arcDashGap={() => Math.max(0.035, 0.14 - flowDensity * 0.015)}
+          arcDashInitialGap={(d) => d.idx * 0.07}
+          arcDashAnimateTime={(d) => (d.kind === 'backbone' ? 1600 : Math.max(1050, 2600 - flowDensity * 260))}
+          arcsTransitionDuration={300}
+          labelsData={labels}
+          labelLat="lat"
+          labelLng="lng"
+          labelText="name"
+          labelAltitude={(d) => (d.target ? 0.028 : d.hub ? 0.021 : 0.016)}
+          labelColor={(d) => (d.target ? '#ff8292' : d.hub ? '#f1c978' : '#c8f8eb')}
+          labelSize={(d) => {
+            const base = d.target ? 0.72 : d.hub ? 0.52 : 0.36;
+            return base * labelScale;
+          }}
+          labelResolution={3}
+          labelIncludeDot={false}
+          labelsTransitionDuration={250}
+          onGlobeReady={onGlobeReady}
+        />
       </div>
+
       <FilterPanel
         open={filterOpen}
         setOpen={setFilterOpen}
@@ -498,8 +385,8 @@ export default function App() {
         flowDensity={flowDensity}
         setFlowDensity={setFlowDensity}
       />
-      <div className="vignette" />
-      <div className="grain" />
+
+      <div className="screen-vignette" />
     </main>
   );
 }
