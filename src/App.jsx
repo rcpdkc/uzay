@@ -341,11 +341,51 @@ function buildFlatGraticule() {
   return lines;
 }
 
+function buildFlatRoutePath(arc) {
+  const start = toUnit(arc.from.lat, arc.from.lng);
+  const end = toUnit(arc.to.lat, arc.to.lng);
+  const dot = THREE.MathUtils.clamp(start.dot(end), -1, 1);
+  const omega = Math.acos(dot);
+  const sinOmega = Math.sin(omega);
+
+  let path = '';
+  let lastX = null;
+
+  for (let i = 0; i <= 72; i += 1) {
+    const t = i / 72;
+    let vector;
+
+    if (Math.abs(sinOmega) < 1e-6) {
+      vector = start.clone().lerp(end, t).normalize();
+    } else {
+      const a = Math.sin((1 - t) * omega) / sinOmega;
+      const b = Math.sin(t * omega) / sinOmega;
+      vector = start.clone().multiplyScalar(a).add(end.clone().multiplyScalar(b)).normalize();
+    }
+
+    const geo = fromUnit(vector);
+    const point = projectFlat(geo.lat, geo.lng);
+    const jump = lastX !== null && Math.abs(point.x - lastX) > 430;
+
+    path += `${i === 0 || jump ? 'M' : 'L'}${point.x.toFixed(2)},${point.y.toFixed(2)} `;
+    lastX = point.x;
+  }
+
+  return path.trim();
+}
+
 function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
   const svgRef = useRef();
+  const worldRef = useRef();
   const dragRef = useRef(null);
-  const [viewport, setViewport] = useState({ scale: 1, x: 0, y: 0 });
+  const viewportRef = useRef({ scale: 1, x: 0, y: 0 });
+  const rafRef = useRef(null);
+
   const graticule = useMemo(() => buildFlatGraticule(), []);
+  const flatRoutes = useMemo(
+    () => arcs.map((arc) => ({ ...arc, d: buildFlatRoutePath(arc) })),
+    [arcs]
+  );
 
   const countries = useMemo(
     () => geojson.features.filter((feature) => !isAntarcticaFeature(feature)),
@@ -360,73 +400,118 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
     return [...unique.values()];
   }, [nodes]);
 
-  const toSvgDelta = (dx, dy) => {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return { dx: 0, dy: 0 };
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const applyViewport = () => {
+    const world = worldRef.current;
+    if (!world) return;
+    const { scale, x, y } = viewportRef.current;
+    world.setAttribute('transform', `translate(${x} ${y}) scale(${scale})`);
+  };
+
+  const scheduleViewport = () => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      applyViewport();
+    });
+  };
+
+  const clampViewport = (next) => {
+    const scale = THREE.MathUtils.clamp(next.scale, 1, 4.2);
+    const maxX = 475 * (scale - 1);
+    const maxY = 265 * (scale - 1);
+
     return {
-      dx: dx * (1000 / rect.width),
-      dy: dy * (560 / rect.height),
+      scale,
+      x: THREE.MathUtils.clamp(next.x, -maxX, maxX),
+      y: THREE.MathUtils.clamp(next.y, -maxY, maxY),
     };
   };
 
   const handleWheel = (event) => {
     event.preventDefault();
+    event.stopPropagation();
+
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    const current = viewportRef.current;
     const pointerX = ((event.clientX - rect.left) / rect.width) * 1000;
     const pointerY = ((event.clientY - rect.top) / rect.height) * 560;
-    const factor = event.deltaY < 0 ? 1.12 : 0.89;
+    const factor = event.deltaY < 0 ? 1.10 : 0.91;
+    const nextScale = THREE.MathUtils.clamp(current.scale * factor, 1, 4.2);
 
-    setViewport((current) => {
-      const nextScale = THREE.MathUtils.clamp(current.scale * factor, 1, 4.5);
-      const ratio = nextScale / current.scale;
-      return {
-        scale: nextScale,
-        x: pointerX - (pointerX - current.x) * ratio,
-        y: pointerY - (pointerY - current.y) * ratio,
-      };
+    if (Math.abs(nextScale - current.scale) < 0.001) return;
+
+    const ratio = nextScale / current.scale;
+    viewportRef.current = clampViewport({
+      scale: nextScale,
+      x: pointerX - (pointerX - current.x) * ratio,
+      y: pointerY - (pointerY - current.y) * ratio,
     });
+
+    scheduleViewport();
   };
 
   const handlePointerDown = (event) => {
+    event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    const current = viewportRef.current;
     dragRef.current = {
+      pointerId: event.pointerId,
       clientX: event.clientX,
       clientY: event.clientY,
-      x: viewport.x,
-      y: viewport.y,
+      x: current.x,
+      y: current.y,
     };
+    svgRef.current?.classList.add('dragging');
   };
 
   const handlePointerMove = (event) => {
-    if (!dragRef.current) return;
-    const delta = toSvgDelta(
-      event.clientX - dragRef.current.clientX,
-      event.clientY - dragRef.current.clientY
-    );
-    setViewport((current) => ({
-      ...current,
-      x: dragRef.current.x + delta.dx,
-      y: dragRef.current.y + delta.dy,
-    }));
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const dx = (event.clientX - drag.clientX) * (1000 / rect.width);
+    const dy = (event.clientY - drag.clientY) * (560 / rect.height);
+    const current = viewportRef.current;
+
+    viewportRef.current = clampViewport({
+      scale: current.scale,
+      x: drag.x + dx,
+      y: drag.y + dy,
+    });
+
+    scheduleViewport();
   };
 
   const stopDragging = (event) => {
-    if (dragRef.current) event.currentTarget.releasePointerCapture?.(event.pointerId);
+    const drag = dragRef.current;
+    if (!drag) return;
+    event.currentTarget.releasePointerCapture?.(drag.pointerId);
     dragRef.current = null;
+    svgRef.current?.classList.remove('dragging');
   };
 
-  const resetViewport = () => setViewport({ scale: 1, x: 0, y: 0 });
+  const resetViewport = () => {
+    viewportRef.current = { scale: 1, x: 0, y: 0 };
+    scheduleViewport();
+  };
 
   return (
     <div className="flat-map-layer" aria-hidden="true">
       <div className="flat-map-frame">
         <div className="flat-map-ambient flat-map-ambient-a" />
         <div className="flat-map-ambient flat-map-ambient-b" />
+
         <svg
           ref={svgRef}
-          className={`flat-map-svg ${dragRef.current ? 'dragging' : ''}`}
+          className="flat-map-svg"
           viewBox="0 0 1000 560"
           preserveAspectRatio="xMidYMid meet"
           onWheel={handleWheel}
@@ -434,7 +519,6 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
           onPointerMove={handlePointerMove}
           onPointerUp={stopDragging}
           onPointerCancel={stopDragging}
-          onPointerLeave={stopDragging}
           onDoubleClick={resetViewport}
         >
           <defs>
@@ -443,28 +527,28 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
               <stop offset="48%" stopColor="#051526" />
               <stop offset="100%" stopColor="#010610" />
             </radialGradient>
+
             <linearGradient id="flatLand" x1="0" x2="0.85" y1="0" y2="1">
               <stop offset="0%" stopColor="#42627f" />
               <stop offset="42%" stopColor="#29465f" />
               <stop offset="100%" stopColor="#172f45" />
             </linearGradient>
+
             <linearGradient id="flatTurkey" x1="0" x2="1" y1="0" y2="1">
               <stop offset="0%" stopColor="#ff4b69" />
               <stop offset="52%" stopColor="#c42843" />
               <stop offset="100%" stopColor="#741226" />
             </linearGradient>
+
             <filter id="flatNodeGlow" x="-120%" y="-120%" width="340%" height="340%">
-              <feGaussianBlur stdDeviation="2.2" result="blur" />
+              <feGaussianBlur stdDeviation="2.1" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
 
           <rect x="0" y="0" width="1000" height="560" fill="url(#flatOcean)" />
 
-          <g
-            className="flat-map-world"
-            transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}
-          >
+          <g ref={worldRef} className="flat-map-world">
             <g className="flat-graticule">
               {graticule.map((d, index) => <path key={index} d={d} />)}
             </g>
@@ -480,27 +564,21 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
             </g>
 
             <g className="flat-routes">
-              {arcs.map((arc, index) => {
-                const a = projectFlat(arc.from.lat, arc.from.lng);
-                const b = projectFlat(arc.to.lat, arc.to.lng);
-                const distance = Math.hypot(b.x - a.x, b.y - a.y);
-                const bend = Math.max(16, Math.min(64, distance * 0.09));
-                const cx = (a.x + b.x) / 2;
-                const cy = ((a.y + b.y) / 2) - bend;
-                const d = `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`;
-                return (
-                  <g key={`route-${index}`} className={arc.hub ? 'flat-route-group hub' : 'flat-route-group'}>
-                    <path d={d} pathLength="100" className="flat-route-glow" />
-                    <path d={d} pathLength="100" className="flat-route-base" />
-                    <path
-                      d={d}
-                      pathLength="100"
-                      className="flat-route-packet"
-                      style={{ animationDelay: `-${(index * 0.61).toFixed(2)}s` }}
-                    />
-                  </g>
-                );
-              })}
+              {flatRoutes.map((arc, index) => (
+                <g
+                  key={`route-${index}`}
+                  className={arc.hub ? 'flat-route-group hub' : 'flat-route-group'}
+                >
+                  <path d={arc.d} pathLength="100" className="flat-route-glow" />
+                  <path d={arc.d} pathLength="100" className="flat-route-base" />
+                  <path
+                    d={arc.d}
+                    pathLength="100"
+                    className="flat-route-packet"
+                    style={{ animationDelay: `-${(index * 0.61).toFixed(2)}s` }}
+                  />
+                </g>
+              ))}
             </g>
 
             <g className="flat-nodes">
@@ -508,10 +586,15 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
                 const p = projectFlat(node.lat, node.lng);
                 const radius = (node.target ? 5.1 : node.hub ? 3.9 : 2.15) * nodeScale;
                 const cls = node.target ? 'flat-node turkey' : node.hub ? 'flat-node hub' : 'flat-node';
+
                 return (
                   <g key={`node-${index}`} className={cls}>
-                    {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 3.05} className="flat-node-aura" />}
-                    {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.0} className="flat-node-ring" />}
+                    {(node.target || node.hub) && (
+                      <>
+                        <circle cx={p.x} cy={p.y} r={radius * 3.0} className="flat-node-aura" />
+                        <circle cx={p.x} cy={p.y} r={radius * 2.0} className="flat-node-ring" />
+                      </>
+                    )}
                     <circle
                       cx={p.x}
                       cy={p.y}
@@ -545,11 +628,6 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
 
         <div className="flat-map-scan" />
         <div className="flat-map-sheen" />
-        <div className="flat-map-zoom-hint">
-          <span className="zoom-mouse" />
-          <span className="zoom-plus">+</span>
-          <span className="zoom-minus">−</span>
-        </div>
       </div>
     </div>
   );
@@ -564,7 +642,13 @@ export default function App() {
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
   const [flowDensity, setFlowDensity] = useState(3);
-  const [flatMode, setFlatMode] = useState(false);
+  const [modePhase, setModePhase] = useState('globe');
+  const modeTimerRef = useRef(null);
+  const flatMode = modePhase === 'flat' || modePhase === 'to-flat';
+
+  useEffect(() => () => {
+    if (modeTimerRef.current) clearTimeout(modeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -611,9 +695,48 @@ export default function App() {
 
 
   useEffect(() => {
-    const controls = globeRef.current?.controls?.();
-    if (controls) controls.autoRotate = !flatMode;
-  }, [flatMode]);
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const controls = globe.controls?.();
+
+    if (modePhase === 'flat') {
+      if (controls) controls.autoRotate = false;
+      globe.pauseAnimation?.();
+      return;
+    }
+
+    globe.resumeAnimation?.();
+    if (controls) controls.autoRotate = modePhase === 'globe';
+  }, [modePhase]);
+
+  const handleModeSwitch = () => {
+    if (modePhase === 'to-flat' || modePhase === 'to-globe') return;
+    if (modeTimerRef.current) clearTimeout(modeTimerRef.current);
+
+    const globe = globeRef.current;
+    const controls = globe?.controls?.();
+    if (controls) controls.autoRotate = false;
+
+    if (modePhase === 'globe') {
+      globe?.pointOfView?.({ lat: 18, lng: 20, altitude: 1.72 }, 240);
+      setModePhase('to-flat');
+      modeTimerRef.current = setTimeout(() => {
+        setModePhase('flat');
+        modeTimerRef.current = null;
+      }, 920);
+      return;
+    }
+
+    globe?.resumeAnimation?.();
+    setModePhase('to-globe');
+    modeTimerRef.current = setTimeout(() => {
+      setModePhase('globe');
+      const nextControls = globeRef.current?.controls?.();
+      if (nextControls) nextControls.autoRotate = true;
+      modeTimerRef.current = null;
+    }, 920);
+  };
 
   const onReady = () => {
     const globe = globeRef.current;
@@ -654,7 +777,7 @@ export default function App() {
   };
 
   return (
-    <main className={`space-shell ${flatMode ? 'flat-mode' : 'globe-mode'}`}>
+    <main className={`space-shell mode-${modePhase}`}>
       <SpaceBackdrop />
       <div className="globe-halo" />
       <div className="globe-host">
@@ -742,7 +865,8 @@ export default function App() {
 
       <button
         className={`mode-switch icon-only ${flatMode ? 'active' : ''}`}
-        onClick={() => setFlatMode((value) => !value)}
+        onClick={handleModeSwitch}
+        disabled={modePhase === 'to-flat' || modePhase === 'to-globe'}
         aria-pressed={flatMode}
         aria-label={flatMode ? '3D küre görünümüne dön' : 'Düz harita görünümüne geç'}
       >
