@@ -394,24 +394,9 @@ button { -webkit-tap-highlight-color: transparent; }
 
 
 .globe-host {
-  transition:
-    opacity .48s ease,
-    transform .72s cubic-bezier(.2,.8,.2,1),
-    visibility 0s linear 0s;
   transform-origin: 50% 50%;
-  will-change: opacity, transform;
   backface-visibility: hidden;
-}
-
-.flat-mode .globe-host {
-  opacity: 0;
-  transform: scale(.92);
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity .42s ease,
-    transform .68s cubic-bezier(.2,.8,.2,1),
-    visibility 0s linear .7s;
+  will-change: transform, opacity;
 }
 
 .flat-map-layer {
@@ -420,21 +405,61 @@ button { -webkit-tap-highlight-color: transparent; }
   z-index: 5;
   pointer-events: none;
   opacity: 0;
-  transform: perspective(1500px) rotateY(-12deg) scaleX(.12) scaleY(.94);
+  visibility: hidden;
   transform-origin: 50% 50%;
-  transition:
-    opacity .42s ease,
-    transform .82s cubic-bezier(.18,.86,.22,1);
-  will-change: transform, opacity;
   backface-visibility: hidden;
+  will-change: transform, opacity;
   contain: layout paint style;
-  transform-style: preserve-3d;
 }
 
-.flat-mode .flat-map-layer {
+.mode-globe .globe-host {
   opacity: 1;
-  transform: perspective(1500px) rotateY(0deg) scaleX(1) scaleY(1);
+  visibility: visible;
+  transform: perspective(1500px) rotateX(0deg) scale3d(1,1,1);
+}
+
+.mode-globe .flat-map-layer {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mode-flat .globe-host {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: perspective(1500px) rotateX(78deg) scale3d(.86,.12,1);
+}
+
+.mode-flat .flat-map-layer {
+  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transform: perspective(1500px) rotateX(0deg) scale3d(1,1,1);
+}
+
+.mode-to-flat .globe-host {
+  visibility: visible;
+  pointer-events: none;
+  animation: globeFlattenOut .86s cubic-bezier(.2,.78,.18,1) both;
+}
+
+.mode-to-flat .flat-map-layer {
+  visibility: visible;
+  pointer-events: none;
+  animation: flatMapOpenIn .78s cubic-bezier(.16,.84,.2,1) .14s both;
+}
+
+.mode-to-globe .flat-map-layer {
+  visibility: visible;
+  pointer-events: none;
+  animation: flatMapFoldOut .68s cubic-bezier(.2,.76,.22,1) both;
+}
+
+.mode-to-globe .globe-host {
+  visibility: visible;
+  pointer-events: none;
+  animation: globeRoundIn .80s cubic-bezier(.16,.84,.2,1) .10s both;
 }
 
 .flat-map-frame {
@@ -452,8 +477,7 @@ button { -webkit-tap-highlight-color: transparent; }
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: .45;
+  opacity: .34;
 }
 .flat-map-ambient-a {
   width: 54vw;
@@ -500,9 +524,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .flat-countries {
-  filter:
-    drop-shadow(0 1px 0 rgba(151,205,244,.10))
-    drop-shadow(0 7px 13px rgba(0,0,0,.30));
+  filter: none;
 }
 
 .flat-country.turkey {
@@ -521,39 +543,40 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .flat-route-glow {
-  stroke: rgba(54,155,255,.22);
-  stroke-width: 4.8;
+  stroke: rgba(78,169,255,.16);
+  stroke-width: 4.2;
   filter: none;
 }
 
 .flat-route-base {
-  stroke: rgba(83,181,255,.76);
-  stroke-width: 1.85;
+  stroke: rgba(78,169,255,.58);
+  stroke-width: 1.9;
 }
 
 .flat-route-group.hub .flat-route-glow {
-  stroke: rgba(255,197,75,.22);
-  stroke-width: 5.5;
+  stroke: rgba(255,211,122,.18);
+  stroke-width: 5.0;
 }
 
 .flat-route-group.hub .flat-route-base {
-  stroke: rgba(255,210,103,.82);
-  stroke-width: 2.25;
+  stroke: rgba(255,211,122,.68);
+  stroke-width: 2.55;
 }
 
 .flat-route-packet {
-  stroke: #dff7ff;
-  stroke-width: 3.6;
-  stroke-dasharray: 2.2 97.8;
-  animation: flatPacket 8.4s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(101,205,255,.92));
+  stroke: #e5f7ff;
+  stroke-width: 3.0;
+  stroke-dasharray: 1.8 98.2;
+  animation: flatPacket 8.6s linear infinite;
+  filter: drop-shadow(0 0 3px rgba(105,196,255,.82));
 }
 
 .flat-route-group.hub .flat-route-packet {
-  stroke: #fff1b8;
-  stroke-width: 4.1;
-  animation-duration: 6.4s;
-  filter: drop-shadow(0 0 5px rgba(255,205,91,.96));
+  stroke: #fff3bd;
+  stroke-width: 3.8;
+  stroke-dasharray: 2.6 97.4;
+  animation-duration: 6.5s;
+  filter: drop-shadow(0 0 4px rgba(255,208,106,.88));
 }
 
 .flat-node-core { fill: #55ffad; }
@@ -626,13 +649,12 @@ button { -webkit-tap-highlight-color: transparent; }
     linear-gradient(108deg, transparent 0 34%, rgba(112,194,255,.055) 46%, transparent 58%),
     radial-gradient(circle at 50% 0%, rgba(83,175,255,.10), transparent 34%),
     radial-gradient(circle at 50% 100%, rgba(45,109,180,.05), transparent 35%);
-  mix-blend-mode: screen;
-  animation: mapSheen 12s ease-in-out infinite alternate;
+  opacity: .72;
 }
 
-.flat-mode .globe-halo { opacity: .32; }
-.flat-mode .coordinate-hud,
-.flat-mode .right-ticks { opacity: .58; }
+.mode-flat .globe-halo { opacity: .32; }
+.mode-flat .coordinate-hud,
+.mode-flat .right-ticks { opacity: .58; }
 
 @keyframes flatPacket {
   from { stroke-dashoffset: 0; }
@@ -808,54 +830,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .flat-map-world {
   transform-box: fill-box;
   transform-origin: 0 0;
-  transition: transform .08s linear;
 }
 
-.flat-map-zoom-hint {
-  position: absolute;
-  left: 28px;
-  top: 50%;
-  z-index: 8;
-  transform: translateY(-50%);
-  width: 34px;
-  padding: 7px 0;
-  display: grid;
-  place-items: center;
-  gap: 7px;
-  border: 1px solid rgba(103,170,230,.16);
-  border-radius: 13px;
-  background: rgba(2,10,20,.38);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
-  backdrop-filter: blur(10px);
-  opacity: .48;
-  pointer-events: none;
-}
-.zoom-mouse {
-  width: 12px;
-  height: 18px;
-  border: 1px solid rgba(162,205,240,.65);
-  border-radius: 7px;
-  position: relative;
-}
-.zoom-mouse::after {
-  content: "";
-  position: absolute;
-  width: 2px;
-  height: 4px;
-  left: 50%;
-  top: 3px;
-  transform: translateX(-50%);
-  border-radius: 2px;
-  background: rgba(117,185,242,.85);
-}
-.zoom-plus,
-.zoom-minus {
-  color: rgba(159,205,241,.75);
-  font-size: 12px;
-  line-height: 1;
-}
 
-.flat-mode .flat-map-frame::after {
+
+.mode-flat .flat-map-frame::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -864,6 +843,79 @@ button { -webkit-tap-highlight-color: transparent; }
     radial-gradient(ellipse at 50% 49%, transparent 48%, rgba(0,0,0,.12) 74%, rgba(0,0,0,.38) 100%);
 }
 
-@media (max-width: 650px) {
-  .flat-map-zoom-hint { display: none; }
+
+
+.mode-globe .flat-route-packet,
+.mode-globe .flat-node-ring {
+  animation-play-state: paused;
+}
+
+.mode-switch:disabled {
+  cursor: default;
+  pointer-events: none;
+  opacity: .78;
+}
+
+@keyframes globeFlattenOut {
+  0% {
+    opacity: 1;
+    transform: perspective(1500px) rotateX(0deg) scale3d(1,1,1) translate3d(0,0,0);
+  }
+  38% {
+    opacity: 1;
+    transform: perspective(1500px) rotateX(10deg) scale3d(.96,.88,1) translate3d(0,0,0);
+  }
+  70% {
+    opacity: .82;
+    transform: perspective(1500px) rotateX(50deg) scale3d(.91,.44,1) translate3d(0,2%,0);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1500px) rotateX(78deg) scale3d(.86,.12,1) translate3d(0,6%,0);
+  }
+}
+
+@keyframes flatMapOpenIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1500px) rotateX(76deg) scale3d(.86,.12,1);
+  }
+  48% {
+    opacity: .62;
+    transform: perspective(1500px) rotateX(28deg) scale3d(.94,.70,1);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1500px) rotateX(0deg) scale3d(1,1,1);
+  }
+}
+
+@keyframes flatMapFoldOut {
+  0% {
+    opacity: 1;
+    transform: perspective(1500px) rotateX(0deg) scale3d(1,1,1);
+  }
+  62% {
+    opacity: .58;
+    transform: perspective(1500px) rotateX(40deg) scale3d(.93,.56,1);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1500px) rotateX(76deg) scale3d(.86,.12,1);
+  }
+}
+
+@keyframes globeRoundIn {
+  0% {
+    opacity: 0;
+    transform: perspective(1500px) rotateX(78deg) scale3d(.86,.12,1) translate3d(0,6%,0);
+  }
+  54% {
+    opacity: .74;
+    transform: perspective(1500px) rotateX(34deg) scale3d(.92,.64,1) translate3d(0,1%,0);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1500px) rotateX(0deg) scale3d(1,1,1) translate3d(0,0,0);
+  }
 }
