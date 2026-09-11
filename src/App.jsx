@@ -262,9 +262,26 @@ function buildRoutePath(arc) {
 
 
 function projectFlat(lat, lng) {
+  const lambda = THREE.MathUtils.degToRad(lng);
+  const phi = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(lat, -89.5, 89.5));
+  const phi2 = phi * phi;
+  const phi4 = phi2 * phi2;
+
+  const xRaw = lambda * (
+    0.8707
+    - 0.131979 * phi2
+    + phi4 * (-0.013791 + phi4 * (0.003971 * phi2 - 0.001529 * phi4))
+  );
+
+  const yRaw = phi * (
+    1.007226
+    + phi2 * (0.015085 + phi4 * (-0.044475 + 0.028874 * phi2 - 0.005916 * phi4))
+  );
+
+  const scale = 162;
   return {
-    x: ((lng + 180) / 360) * 1000,
-    y: ((90 - lat) / 180) * 500,
+    x: 500 + xRaw * scale,
+    y: 280 - yRaw * scale,
   };
 }
 
@@ -275,7 +292,7 @@ function ringToPath(ring = []) {
   ring.forEach((coord, index) => {
     const [lng, lat] = coord;
     const { x, y } = projectFlat(lat, lng);
-    const jump = lastX !== null && Math.abs(x - lastX) > 520;
+    const jump = lastX !== null && Math.abs(x - lastX) > 430;
     d += `${index === 0 || jump ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
     lastX = x;
   });
@@ -294,7 +311,34 @@ function featureToPath(feature) {
   return '';
 }
 
+function projectedPath(points) {
+  return points.map(([lat, lng], index) => {
+    const p = projectFlat(lat, lng);
+    return `${index === 0 ? 'M' : 'L'}${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+  }).join(' ');
+}
+
+function buildFlatGraticule() {
+  const lines = [];
+
+  [-60, -30, 0, 30, 60].forEach((lat) => {
+    const points = [];
+    for (let lng = -180; lng <= 180; lng += 5) points.push([lat, lng]);
+    lines.push(projectedPath(points));
+  });
+
+  [-120, -60, 0, 60, 120].forEach((lng) => {
+    const points = [];
+    for (let lat = -85; lat <= 85; lat += 5) points.push([lat, lng]);
+    lines.push(projectedPath(points));
+  });
+
+  return lines;
+}
+
 function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
+  const graticule = useMemo(() => buildFlatGraticule(), []);
+
   const labels = useMemo(() => {
     const unique = new Map();
     nodes.filter((node) => node.label).forEach((node) => {
@@ -308,13 +352,18 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
       <div className="flat-map-frame">
         <div className="flat-map-ambient flat-map-ambient-a" />
         <div className="flat-map-ambient flat-map-ambient-b" />
-        <svg className="flat-map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet">
+        <svg className="flat-map-svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <linearGradient id="flatOcean" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#020b18" />
-              <stop offset="48%" stopColor="#06182b" />
-              <stop offset="100%" stopColor="#020914" />
-            </linearGradient>
+            <radialGradient id="flatOcean" cx="50%" cy="45%" r="70%">
+              <stop offset="0%" stopColor="#0a2038" />
+              <stop offset="48%" stopColor="#051526" />
+              <stop offset="100%" stopColor="#010610" />
+            </radialGradient>
+            <radialGradient id="flatWorldDepth" cx="50%" cy="43%" r="62%">
+              <stop offset="0%" stopColor="rgba(76,158,230,.11)" />
+              <stop offset="68%" stopColor="rgba(34,90,145,.035)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+            </radialGradient>
             <linearGradient id="flatLand" x1="0" x2="0.85" y1="0" y2="1">
               <stop offset="0%" stopColor="#36536e" />
               <stop offset="48%" stopColor="#243d55" />
@@ -335,12 +384,11 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
             </filter>
           </defs>
 
-          <rect x="0" y="0" width="1000" height="500" fill="url(#flatOcean)" />
-          <ellipse className="flat-world-halo" cx="500" cy="254" rx="425" ry="196" />
+          <rect x="0" y="0" width="1000" height="560" fill="url(#flatOcean)" />
+          <ellipse className="flat-world-depth" cx="500" cy="280" rx="462" ry="242" fill="url(#flatWorldDepth)" />
 
           <g className="flat-graticule">
-            {[100,200,300,400,500,600,700,800,900].map((x) => <line key={`vx-${x}`} x1={x} y1="0" x2={x} y2="500" />)}
-            {[100,200,300,400].map((y) => <line key={`hy-${y}`} x1="0" y1={y} x2="1000" y2={y} />)}
+            {graticule.map((d, index) => <path key={index} d={d} />)}
           </g>
 
           <g className="flat-countries">
@@ -357,10 +405,10 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
             {arcs.map((arc, index) => {
               const a = projectFlat(arc.from.lat, arc.from.lng);
               const b = projectFlat(arc.to.lat, arc.to.lng);
-              const dx = Math.abs(b.x - a.x);
-              const bend = Math.max(20, Math.min(86, dx * 0.125));
+              const distance = Math.hypot(b.x - a.x, b.y - a.y);
+              const bend = Math.max(18, Math.min(72, distance * 0.10));
               const cx = (a.x + b.x) / 2;
-              const cy = Math.min(a.y, b.y) - bend;
+              const cy = ((a.y + b.y) / 2) - bend;
               const d = `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`;
               return (
                 <g key={`route-${index}`} className={arc.hub ? 'flat-route-group hub' : 'flat-route-group'}>
