@@ -382,29 +382,35 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .mode-switch-icon {
-  width: 27px;
-  height: 27px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  border: 1px solid rgba(116, 184, 247, .42);
-  color: #72b7ff;
-  box-shadow: inset 0 0 12px rgba(51,139,238,.11), 0 0 11px rgba(58,146,255,.10);
-  font-size: 12px;
+  color: #7fc2ff;
+  transition: transform .35s ease, color .25s ease;
 }
 
 
 
 .globe-host {
-  transition: opacity 1s cubic-bezier(.2,.75,.2,1), transform 1.05s cubic-bezier(.2,.75,.2,1), filter 1s ease;
+  transition:
+    opacity .48s ease,
+    transform .72s cubic-bezier(.2,.8,.2,1),
+    visibility 0s linear 0s;
   transform-origin: 50% 50%;
+  will-change: opacity, transform;
+  backface-visibility: hidden;
 }
 
 .flat-mode .globe-host {
   opacity: 0;
-  transform: scale(.76);
-  filter: blur(7px);
+  transform: scale(.92);
+  visibility: hidden;
   pointer-events: none;
+  transition:
+    opacity .42s ease,
+    transform .68s cubic-bezier(.2,.8,.2,1),
+    visibility 0s linear .7s;
 }
 
 .flat-map-layer {
@@ -413,24 +419,18 @@ button { -webkit-tap-highlight-color: transparent; }
   z-index: 5;
   pointer-events: none;
   opacity: 0;
-  transform: scale(.84);
-  filter: blur(10px) saturate(.8);
-  clip-path: inset(48% 46% 48% 46% round 50%);
+  transform: perspective(1500px) rotateY(-12deg) scaleX(.12) scaleY(.94);
+  transform-origin: 50% 50%;
   transition:
-    clip-path 1.2s cubic-bezier(.16,.84,.18,1),
-    opacity .7s ease,
-    transform 1.2s cubic-bezier(.16,.84,.18,1),
-    filter .9s ease;
-  background:
-    radial-gradient(circle at 50% 52%, rgba(24,72,118,.18), transparent 34%),
-    linear-gradient(180deg, rgba(1,5,12,.25), rgba(0,2,8,.42));
+    opacity .42s ease,
+    transform .82s cubic-bezier(.18,.86,.22,1);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .flat-mode .flat-map-layer {
   opacity: 1;
-  clip-path: inset(0 0 0 0 round 0);
-  transform: scale(1);
-  filter: blur(0) saturate(1);
+  transform: perspective(1500px) rotateY(0deg) scaleX(1) scaleY(1);
   pointer-events: auto;
 }
 
@@ -439,21 +439,174 @@ button { -webkit-tap-highlight-color: transparent; }
   inset: 0;
   width: 100%;
   height: 100%;
-  aspect-ratio: auto;
-  border-radius: 0;
   overflow: hidden;
-  border: 0;
   background:
-    radial-gradient(circle at 50% 48%, rgba(9,33,58,.28), transparent 38%),
-    linear-gradient(180deg, #020813 0%, #04101f 52%, #020710 100%);
-  box-shadow: none;
-  transform-origin: center;
+    radial-gradient(circle at 50% 48%, rgba(12,47,80,.32), transparent 39%),
+    linear-gradient(180deg, #01060f 0%, #03101d 50%, #01050d 100%);
+}
+
+.flat-map-ambient {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: .45;
+}
+.flat-map-ambient-a {
+  width: 54vw;
+  height: 36vw;
+  left: 23vw;
+  top: 12vh;
+  background: radial-gradient(circle, rgba(24,122,215,.22), transparent 67%);
+}
+.flat-map-ambient-b {
+  width: 30vw;
+  height: 24vw;
+  right: 4vw;
+  bottom: 5vh;
+  background: radial-gradient(circle, rgba(89,63,176,.12), transparent 68%);
 }
 
 .flat-map-svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
+  shape-rendering: geometricPrecision;
+}
+
+.flat-world-halo {
+  fill: rgba(56,142,229,.025);
+  stroke: rgba(91,168,237,.08);
+  stroke-width: 1;
+}
+
+.flat-graticule line {
+  stroke: rgba(111,167,217,.075);
+  stroke-width: .55;
+  vector-effect: non-scaling-stroke;
+}
+
+.flat-country {
+  fill: url(#flatLand);
+  stroke: rgba(174,210,235,.38);
+  stroke-width: .65;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 1.2px 0 rgba(133,196,244,.10)) drop-shadow(0 5px 9px rgba(0,0,0,.24));
+}
+
+.flat-country.turkey {
+  fill: url(#flatTurkey);
+  stroke: rgba(255,139,158,.98);
+  stroke-width: 1.35;
+  filter: drop-shadow(0 0 4px rgba(255,57,89,.82)) drop-shadow(0 0 12px rgba(255,36,74,.33));
+}
+
+.flat-route-glow,
+.flat-route-base,
+.flat-route-packet {
+  fill: none;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.flat-route-glow {
+  stroke: rgba(54,155,255,.22);
+  stroke-width: 5.6;
+  filter: url(#flatRouteGlow);
+}
+
+.flat-route-base {
+  stroke: rgba(83,181,255,.76);
+  stroke-width: 2.05;
+}
+
+.flat-route-group.hub .flat-route-glow {
+  stroke: rgba(255,197,75,.22);
+  stroke-width: 6.4;
+}
+
+.flat-route-group.hub .flat-route-base {
+  stroke: rgba(255,210,103,.82);
+  stroke-width: 2.55;
+}
+
+.flat-route-packet {
+  stroke: #dff7ff;
+  stroke-width: 3.6;
+  stroke-dasharray: 2.2 97.8;
+  animation: flatPacket 8.4s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(101,205,255,.92));
+}
+
+.flat-route-group.hub .flat-route-packet {
+  stroke: #fff1b8;
+  stroke-width: 4.1;
+  animation-duration: 6.4s;
+  filter: drop-shadow(0 0 5px rgba(255,205,91,.96));
+}
+
+.flat-node-core { fill: #55ffad; }
+.flat-node.hub .flat-node-core { fill: #ffc85a; }
+.flat-node.turkey .flat-node-core { fill: #ff3455; }
+
+.flat-node-aura {
+  fill: rgba(85,255,173,.055);
+  stroke: rgba(85,255,173,.13);
+  stroke-width: .65;
+}
+.flat-node.hub .flat-node-aura {
+  fill: rgba(255,200,90,.065);
+  stroke: rgba(255,200,90,.18);
+}
+.flat-node.turkey .flat-node-aura {
+  fill: rgba(255,52,85,.08);
+  stroke: rgba(255,52,85,.24);
+}
+
+.flat-node-ring {
+  fill: none;
+  stroke: rgba(85,255,173,.32);
+  stroke-width: .8;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flatPulse 2.65s ease-out infinite;
+}
+.flat-node.hub .flat-node-ring { stroke: rgba(255,205,90,.52); }
+.flat-node.turkey .flat-node-ring { stroke: rgba(255,72,104,.68); }
+
+.flat-label {
+  fill: rgba(218,239,253,.87);
+  text-anchor: middle;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-weight: 650;
+  letter-spacing: .025em;
+  paint-order: stroke;
+  stroke: rgba(1,7,14,.92);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.flat-label.hub { fill: #fff1c9; font-weight: 760; }
+.flat-label.turkey {
+  fill: #fff5f6;
+  font-weight: 850;
+  filter: drop-shadow(0 0 3px rgba(255,62,95,.75));
+}
+
+.flat-map-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .17;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(130,197,255,.035) 0,
+      rgba(130,197,255,.035) 1px,
+      transparent 1px,
+      transparent 5px
+    );
 }
 
 .flat-map-sheen {
@@ -461,97 +614,16 @@ button { -webkit-tap-highlight-color: transparent; }
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(110deg, transparent 0 30%, rgba(105,185,255,.045) 43%, transparent 57%),
-    radial-gradient(circle at 50% 0%, rgba(76,157,255,.10), transparent 40%);
+    linear-gradient(108deg, transparent 0 34%, rgba(112,194,255,.055) 46%, transparent 58%),
+    radial-gradient(circle at 50% 0%, rgba(83,175,255,.10), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(45,109,180,.05), transparent 35%);
   mix-blend-mode: screen;
+  animation: mapSheen 12s ease-in-out infinite alternate;
 }
 
-.flat-graticule line {
-  stroke: rgba(109,160,210,.08);
-  stroke-width: .6;
-}
-
-.flat-country {
-  fill: rgba(42,68,94,.72);
-  stroke: rgba(164,203,232,.34);
-  stroke-width: .52;
-  vector-effect: non-scaling-stroke;
-}
-
-.flat-country.turkey {
-  fill: rgba(178,35,59,.94);
-  stroke: rgba(255,133,153,.98);
-  stroke-width: 1.1;
-}
-
-.flat-route-base {
-  fill: none;
-  stroke: rgba(79,171,255,.66);
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.flat-route-base.hub {
-  stroke: rgba(255,205,102,.72);
-  stroke-width: 2.2;
-}
-
-.flat-route-packet {
-  fill: none;
-  stroke: #bfeaff;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-dasharray: 3 97;
-  animation: flatPacket 8.6s linear infinite;
-  vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 3px rgba(102,195,255,.9));
-}
-
-.flat-route-packet.hub {
-  stroke: #fff0b3;
-  stroke-width: 3;
-  animation-duration: 6.5s;
-  filter: drop-shadow(0 0 4px rgba(255,207,102,.9));
-}
-
-.flat-node-core { fill: #55ffad; }
-.flat-node.hub .flat-node-core { fill: #ffc85a; }
-.flat-node.turkey .flat-node-core { fill: #ff3455; }
-
-.flat-node-ring {
-  fill: none;
-  stroke: rgba(255,255,255,.22);
-  stroke-width: .8;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: flatPulse 2.3s ease-out infinite;
-}
-.flat-node.hub .flat-node-ring { stroke: rgba(255,205,90,.46); }
-.flat-node.turkey .flat-node-ring { stroke: rgba(255,52,85,.58); }
-
-.flat-label {
-  fill: rgba(219,239,252,.84);
-  text-anchor: middle;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
-  font-weight: 600;
-  letter-spacing: .02em;
-  paint-order: stroke;
-  stroke: rgba(1,7,14,.72);
-  stroke-width: 2;
-  stroke-linejoin: round;
-}
-.flat-label.hub { fill: #fff0c6; font-weight: 700; }
-.flat-label.turkey { fill: #fff3f5; font-weight: 800; }
-
-.flat-mode .globe-halo {
-  opacity: .42;
-}
-
+.flat-mode .globe-halo { opacity: .32; }
 .flat-mode .coordinate-hud,
-.flat-mode .right-ticks {
-  opacity: .62;
-}
+.flat-mode .right-ticks { opacity: .58; }
 
 @keyframes flatPacket {
   from { stroke-dashoffset: 0; }
@@ -559,8 +631,13 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 @keyframes flatPulse {
-  0% { transform: scale(.65); opacity: .8; }
-  100% { transform: scale(1.35); opacity: 0; }
+  0% { transform: scale(.72); opacity: .82; }
+  100% { transform: scale(1.42); opacity: 0; }
+}
+
+@keyframes mapSheen {
+  from { transform: translate3d(-1.5%,0,0); opacity: .55; }
+  to { transform: translate3d(1.5%,0,0); opacity: .9; }
 }
 
 .corner-status {
@@ -727,4 +804,19 @@ button { -webkit-tap-highlight-color: transparent; }
 @keyframes mapSheen {
   from { transform: translateX(-2%); opacity: .55; }
   to { transform: translateX(2%); opacity: .9; }
+}
+
+.mode-switch-icon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(72,159,255,.28));
+}
+.mode-switch.active .mode-switch-icon {
+  transform: rotate(90deg) scale(.96);
+  color: #b7dcff;
 }
