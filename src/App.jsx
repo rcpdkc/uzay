@@ -103,10 +103,13 @@ function useWindowSize() {
 function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale, setLabelScale, nodeScale, setNodeScale, flowDensity, setFlowDensity }) {
   return (
     <div className="filter-wrap">
-      <button className={`filter-button ${open ? 'active' : ''}`} onClick={() => setOpen((v) => !v)}>
-        <span className="filter-globe">◎</span>
-        <span>FİLTRELER</span>
-        <span className="filter-chevron">{open ? '⌃' : '⌄'}</span>
+      <button
+        className={`filter-button icon-only ${open ? 'active' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Filtreleri aç veya kapat"
+        title="Filtreler"
+      >
+        <span className="filter-icon-glyph">⌘</span>
       </button>
       {open && (
         <div className="filter-panel">
