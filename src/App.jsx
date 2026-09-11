@@ -90,6 +90,11 @@ function isTurkeyFeature(feature) {
   return name.includes('turkey') || name.includes('turkiye');
 }
 
+function isAntarcticaFeature(feature) {
+  const name = normalizeName(feature?.properties?.name || feature?.properties?.ADMIN || '');
+  return name.includes('antarctica') || name.includes('antarktika');
+}
+
 function useWindowSize() {
   const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
   useEffect(() => {
@@ -337,7 +342,15 @@ function buildFlatGraticule() {
 }
 
 function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
+  const svgRef = useRef();
+  const dragRef = useRef(null);
+  const [viewport, setViewport] = useState({ scale: 1, x: 0, y: 0 });
   const graticule = useMemo(() => buildFlatGraticule(), []);
+
+  const countries = useMemo(
+    () => geojson.features.filter((feature) => !isAntarcticaFeature(feature)),
+    [geojson]
+  );
 
   const labels = useMemo(() => {
     const unique = new Map();
@@ -347,124 +360,196 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
     return [...unique.values()];
   }, [nodes]);
 
+  const toSvgDelta = (dx, dy) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return { dx: 0, dy: 0 };
+    return {
+      dx: dx * (1000 / rect.width),
+      dy: dy * (560 / rect.height),
+    };
+  };
+
+  const handleWheel = (event) => {
+    event.preventDefault();
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const pointerX = ((event.clientX - rect.left) / rect.width) * 1000;
+    const pointerY = ((event.clientY - rect.top) / rect.height) * 560;
+    const factor = event.deltaY < 0 ? 1.12 : 0.89;
+
+    setViewport((current) => {
+      const nextScale = THREE.MathUtils.clamp(current.scale * factor, 1, 4.5);
+      const ratio = nextScale / current.scale;
+      return {
+        scale: nextScale,
+        x: pointerX - (pointerX - current.x) * ratio,
+        y: pointerY - (pointerY - current.y) * ratio,
+      };
+    });
+  };
+
+  const handlePointerDown = (event) => {
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      x: viewport.x,
+      y: viewport.y,
+    };
+  };
+
+  const handlePointerMove = (event) => {
+    if (!dragRef.current) return;
+    const delta = toSvgDelta(
+      event.clientX - dragRef.current.clientX,
+      event.clientY - dragRef.current.clientY
+    );
+    setViewport((current) => ({
+      ...current,
+      x: dragRef.current.x + delta.dx,
+      y: dragRef.current.y + delta.dy,
+    }));
+  };
+
+  const stopDragging = (event) => {
+    if (dragRef.current) event.currentTarget.releasePointerCapture?.(event.pointerId);
+    dragRef.current = null;
+  };
+
+  const resetViewport = () => setViewport({ scale: 1, x: 0, y: 0 });
+
   return (
     <div className="flat-map-layer" aria-hidden="true">
       <div className="flat-map-frame">
         <div className="flat-map-ambient flat-map-ambient-a" />
         <div className="flat-map-ambient flat-map-ambient-b" />
-        <svg className="flat-map-svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet">
+        <svg
+          ref={svgRef}
+          className={`flat-map-svg ${dragRef.current ? 'dragging' : ''}`}
+          viewBox="0 0 1000 560"
+          preserveAspectRatio="xMidYMid meet"
+          onWheel={handleWheel}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDragging}
+          onPointerCancel={stopDragging}
+          onPointerLeave={stopDragging}
+          onDoubleClick={resetViewport}
+        >
           <defs>
             <radialGradient id="flatOcean" cx="50%" cy="45%" r="70%">
               <stop offset="0%" stopColor="#0a2038" />
               <stop offset="48%" stopColor="#051526" />
               <stop offset="100%" stopColor="#010610" />
             </radialGradient>
-            <radialGradient id="flatWorldDepth" cx="50%" cy="43%" r="62%">
-              <stop offset="0%" stopColor="rgba(76,158,230,.11)" />
-              <stop offset="68%" stopColor="rgba(34,90,145,.035)" />
-              <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-            </radialGradient>
             <linearGradient id="flatLand" x1="0" x2="0.85" y1="0" y2="1">
-              <stop offset="0%" stopColor="#36536e" />
-              <stop offset="48%" stopColor="#243d55" />
-              <stop offset="100%" stopColor="#152b40" />
+              <stop offset="0%" stopColor="#42627f" />
+              <stop offset="42%" stopColor="#29465f" />
+              <stop offset="100%" stopColor="#172f45" />
             </linearGradient>
             <linearGradient id="flatTurkey" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#ff4564" />
-              <stop offset="52%" stopColor="#bc253e" />
-              <stop offset="100%" stopColor="#6f1025" />
+              <stop offset="0%" stopColor="#ff4b69" />
+              <stop offset="52%" stopColor="#c42843" />
+              <stop offset="100%" stopColor="#741226" />
             </linearGradient>
             <filter id="flatNodeGlow" x="-120%" y="-120%" width="340%" height="340%">
-              <feGaussianBlur stdDeviation="2.4" result="blur" />
+              <feGaussianBlur stdDeviation="2.2" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id="flatRouteGlow" x="-35%" y="-35%" width="170%" height="170%">
-              <feGaussianBlur stdDeviation="1.55" result="routeBlur" />
-              <feMerge><feMergeNode in="routeBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
 
           <rect x="0" y="0" width="1000" height="560" fill="url(#flatOcean)" />
-          <ellipse className="flat-world-depth" cx="500" cy="280" rx="462" ry="242" fill="url(#flatWorldDepth)" />
 
-          <g className="flat-graticule">
-            {graticule.map((d, index) => <path key={index} d={d} />)}
-          </g>
+          <g
+            className="flat-map-world"
+            transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}
+          >
+            <g className="flat-graticule">
+              {graticule.map((d, index) => <path key={index} d={d} />)}
+            </g>
 
-          <g className="flat-countries">
-            {geojson.features.map((feature, index) => (
-              <path
-                key={feature.id || feature.properties?.name || index}
-                d={featureToPath(feature)}
-                className={isTurkeyFeature(feature) ? 'flat-country turkey' : 'flat-country'}
-              />
-            ))}
-          </g>
+            <g className="flat-countries">
+              {countries.map((feature, index) => (
+                <path
+                  key={feature.id || feature.properties?.name || index}
+                  d={featureToPath(feature)}
+                  className={isTurkeyFeature(feature) ? 'flat-country turkey' : 'flat-country'}
+                />
+              ))}
+            </g>
 
-          <g className="flat-routes">
-            {arcs.map((arc, index) => {
-              const a = projectFlat(arc.from.lat, arc.from.lng);
-              const b = projectFlat(arc.to.lat, arc.to.lng);
-              const distance = Math.hypot(b.x - a.x, b.y - a.y);
-              const bend = Math.max(18, Math.min(72, distance * 0.10));
-              const cx = (a.x + b.x) / 2;
-              const cy = ((a.y + b.y) / 2) - bend;
-              const d = `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`;
-              return (
-                <g key={`route-${index}`} className={arc.hub ? 'flat-route-group hub' : 'flat-route-group'}>
-                  <path d={d} pathLength="100" className="flat-route-glow" />
-                  <path d={d} pathLength="100" className="flat-route-base" />
-                  <path
-                    d={d}
-                    pathLength="100"
-                    className="flat-route-packet"
-                    style={{ animationDelay: `-${(index * 0.61).toFixed(2)}s` }}
-                  />
-                </g>
-              );
-            })}
-          </g>
+            <g className="flat-routes">
+              {arcs.map((arc, index) => {
+                const a = projectFlat(arc.from.lat, arc.from.lng);
+                const b = projectFlat(arc.to.lat, arc.to.lng);
+                const distance = Math.hypot(b.x - a.x, b.y - a.y);
+                const bend = Math.max(16, Math.min(64, distance * 0.09));
+                const cx = (a.x + b.x) / 2;
+                const cy = ((a.y + b.y) / 2) - bend;
+                const d = `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`;
+                return (
+                  <g key={`route-${index}`} className={arc.hub ? 'flat-route-group hub' : 'flat-route-group'}>
+                    <path d={d} pathLength="100" className="flat-route-glow" />
+                    <path d={d} pathLength="100" className="flat-route-base" />
+                    <path
+                      d={d}
+                      pathLength="100"
+                      className="flat-route-packet"
+                      style={{ animationDelay: `-${(index * 0.61).toFixed(2)}s` }}
+                    />
+                  </g>
+                );
+              })}
+            </g>
 
-          <g className="flat-nodes">
-            {nodes.map((node, index) => {
-              const p = projectFlat(node.lat, node.lng);
-              const radius = (node.target ? 5.1 : node.hub ? 3.9 : 2.15) * nodeScale;
-              const cls = node.target ? 'flat-node turkey' : node.hub ? 'flat-node hub' : 'flat-node';
-              return (
-                <g key={`node-${index}`} className={cls}>
-                  {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 3.05} className="flat-node-aura" />}
-                  {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.0} className="flat-node-ring" />}
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r={radius}
-                    className="flat-node-core"
-                    filter={node.target || node.hub ? 'url(#flatNodeGlow)' : undefined}
-                  />
-                </g>
-              );
-            })}
-          </g>
+            <g className="flat-nodes">
+              {nodes.map((node, index) => {
+                const p = projectFlat(node.lat, node.lng);
+                const radius = (node.target ? 5.1 : node.hub ? 3.9 : 2.15) * nodeScale;
+                const cls = node.target ? 'flat-node turkey' : node.hub ? 'flat-node hub' : 'flat-node';
+                return (
+                  <g key={`node-${index}`} className={cls}>
+                    {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 3.05} className="flat-node-aura" />}
+                    {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.0} className="flat-node-ring" />}
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={radius}
+                      className="flat-node-core"
+                      filter={node.target || node.hub ? 'url(#flatNodeGlow)' : undefined}
+                    />
+                  </g>
+                );
+              })}
+            </g>
 
-          <g className="flat-labels">
-            {labels.map((node) => {
-              const p = projectFlat(node.lat, node.lng);
-              return (
-                <text
-                  key={node.name}
-                  x={p.x}
-                  y={p.y - (node.target ? 13 : 9)}
-                  className={node.target ? 'flat-label turkey' : node.hub ? 'flat-label hub' : 'flat-label'}
-                  style={{ fontSize: `${(node.target ? 11.2 : node.hub ? 8.5 : 7.4) * labelScale}px` }}
-                >
-                  {node.name}
-                </text>
-              );
-            })}
+            <g className="flat-labels">
+              {labels.map((node) => {
+                const p = projectFlat(node.lat, node.lng);
+                return (
+                  <text
+                    key={node.name}
+                    x={p.x}
+                    y={p.y - (node.target ? 13 : 9)}
+                    className={node.target ? 'flat-label turkey' : node.hub ? 'flat-label hub' : 'flat-label'}
+                    style={{ fontSize: `${(node.target ? 11.2 : node.hub ? 8.5 : 7.4) * labelScale}px` }}
+                  >
+                    {node.name}
+                  </text>
+                );
+              })}
+            </g>
           </g>
         </svg>
+
         <div className="flat-map-scan" />
         <div className="flat-map-sheen" />
+        <div className="flat-map-zoom-hint">
+          <span className="zoom-mouse" />
+          <span className="zoom-plus">+</span>
+          <span className="zoom-minus">−</span>
+        </div>
       </div>
     </div>
   );
