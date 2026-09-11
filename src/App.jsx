@@ -300,20 +300,37 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
   return (
     <div className="flat-map-layer" aria-hidden="true">
       <div className="flat-map-frame">
+        <div className="flat-map-ambient flat-map-ambient-a" />
+        <div className="flat-map-ambient flat-map-ambient-b" />
         <svg className="flat-map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <filter id="flatGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2.2" result="blur" />
+            <linearGradient id="flatOcean" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#020b18" />
+              <stop offset="48%" stopColor="#06182b" />
+              <stop offset="100%" stopColor="#020914" />
+            </linearGradient>
+            <linearGradient id="flatLand" x1="0" x2="0.85" y1="0" y2="1">
+              <stop offset="0%" stopColor="#36536e" />
+              <stop offset="48%" stopColor="#243d55" />
+              <stop offset="100%" stopColor="#152b40" />
+            </linearGradient>
+            <linearGradient id="flatTurkey" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#ff4564" />
+              <stop offset="52%" stopColor="#bc253e" />
+              <stop offset="100%" stopColor="#6f1025" />
+            </linearGradient>
+            <filter id="flatNodeGlow" x="-120%" y="-120%" width="340%" height="340%">
+              <feGaussianBlur stdDeviation="2.4" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
-            <linearGradient id="flatOcean" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#061225" />
-              <stop offset="55%" stopColor="#0a1d34" />
-              <stop offset="100%" stopColor="#06101f" />
-            </linearGradient>
+            <filter id="flatRouteGlow" x="-35%" y="-35%" width="170%" height="170%">
+              <feGaussianBlur stdDeviation="1.55" result="routeBlur" />
+              <feMerge><feMergeNode in="routeBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
           </defs>
 
-          <rect x="0" y="0" width="1000" height="500" rx="18" fill="url(#flatOcean)" />
+          <rect x="0" y="0" width="1000" height="500" fill="url(#flatOcean)" />
+          <ellipse className="flat-world-halo" cx="500" cy="254" rx="425" ry="196" />
 
           <g className="flat-graticule">
             {[100,200,300,400,500,600,700,800,900].map((x) => <line key={`vx-${x}`} x1={x} y1="0" x2={x} y2="500" />)}
@@ -335,18 +352,19 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
               const a = projectFlat(arc.from.lat, arc.from.lng);
               const b = projectFlat(arc.to.lat, arc.to.lng);
               const dx = Math.abs(b.x - a.x);
-              const bend = Math.max(18, Math.min(80, dx * 0.12));
+              const bend = Math.max(20, Math.min(86, dx * 0.125));
               const cx = (a.x + b.x) / 2;
               const cy = Math.min(a.y, b.y) - bend;
               const d = `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`;
               return (
-                <g key={`route-${index}`}>
-                  <path d={d} pathLength="100" className={`flat-route-base ${arc.hub ? 'hub' : ''}`} />
+                <g key={`route-${index}`} className={arc.hub ? 'flat-route-group hub' : 'flat-route-group'}>
+                  <path d={d} pathLength="100" className="flat-route-glow" />
+                  <path d={d} pathLength="100" className="flat-route-base" />
                   <path
                     d={d}
                     pathLength="100"
-                    className={`flat-route-packet ${arc.hub ? 'hub' : ''}`}
-                    style={{ animationDelay: `-${(index * 0.73).toFixed(2)}s` }}
+                    className="flat-route-packet"
+                    style={{ animationDelay: `-${(index * 0.61).toFixed(2)}s` }}
                   />
                 </g>
               );
@@ -356,11 +374,13 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
           <g className="flat-nodes">
             {nodes.map((node, index) => {
               const p = projectFlat(node.lat, node.lng);
-              const radius = (node.target ? 5.2 : node.hub ? 4.1 : 2.4) * nodeScale;
+              const radius = (node.target ? 5.1 : node.hub ? 3.9 : 2.15) * nodeScale;
+              const cls = node.target ? 'flat-node turkey' : node.hub ? 'flat-node hub' : 'flat-node';
               return (
-                <g key={`node-${index}`} className={node.target ? 'flat-node turkey' : node.hub ? 'flat-node hub' : 'flat-node'}>
-                  {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.3} className="flat-node-ring" />}
-                  <circle cx={p.x} cy={p.y} r={radius} className="flat-node-core" filter="url(#flatGlow)" />
+                <g key={`node-${index}`} className={cls}>
+                  {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 3.05} className="flat-node-aura" />}
+                  {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.0} className="flat-node-ring" />}
+                  <circle cx={p.x} cy={p.y} r={radius} className="flat-node-core" filter="url(#flatNodeGlow)" />
                 </g>
               );
             })}
@@ -373,9 +393,9 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
                 <text
                   key={node.name}
                   x={p.x}
-                  y={p.y - (node.target ? 12 : 9)}
+                  y={p.y - (node.target ? 13 : 9)}
                   className={node.target ? 'flat-label turkey' : node.hub ? 'flat-label hub' : 'flat-label'}
-                  style={{ fontSize: `${(node.target ? 11 : node.hub ? 8.5 : 7.5) * labelScale}px` }}
+                  style={{ fontSize: `${(node.target ? 11.2 : node.hub ? 8.5 : 7.4) * labelScale}px` }}
                 >
                   {node.name}
                 </text>
@@ -383,6 +403,7 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
             })}
           </g>
         </svg>
+        <div className="flat-map-scan" />
         <div className="flat-map-sheen" />
       </div>
     </div>
@@ -398,7 +419,7 @@ export default function App() {
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
   const [flowDensity, setFlowDensity] = useState(3);
-  const [flatMode, setGlobeMode] = useState(false);
+  const [flatMode, setFlatMode] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -443,6 +464,11 @@ export default function App() {
     return [...unique.values()];
   }, [visibleNodes, labelScale]);
 
+
+  useEffect(() => {
+    const controls = globeRef.current?.controls?.();
+    if (controls) controls.autoRotate = !flatMode;
+  }, [flatMode]);
 
   const onReady = () => {
     const globe = globeRef.current;
@@ -570,15 +596,16 @@ export default function App() {
       />
 
       <button
-        className={`mode-switch ${flatMode ? 'active' : ''}`}
-        onClick={() => setGlobeMode((value) => !value)}
+        className={`mode-switch icon-only ${flatMode ? 'active' : ''}`}
+        onClick={() => setFlatMode((value) => !value)}
         aria-pressed={flatMode}
-        title="Görünüm modunu değiştir"
+        aria-label={flatMode ? '3D küre görünümüne dön' : 'Düz harita görünümüne geç'}
       >
-        <span className="mode-switch-icon">◉</span>
-        <span className="mode-switch-copy">
-          <b>MOD DEĞİŞTİR</b>
-          <small>{flatMode ? 'DÜZ HARİTA' : '3D KÜRE'}</small>
+        <span className="mode-switch-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="7.6" />
+            <path d="M4.8 12h14.4M12 4.4c2.15 2.05 3.15 4.55 3.15 7.6S14.15 17.55 12 19.6M12 4.4C9.85 6.45 8.85 8.95 8.85 12s1 5.55 3.15 7.6" />
+          </svg>
         </span>
       </button>
 
