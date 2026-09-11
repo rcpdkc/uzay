@@ -259,10 +259,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .filter-button:hover,
 .filter-button.active { border-color: rgba(82, 157, 236, .55); box-shadow: 0 16px 46px rgba(0,0,0,.38), 0 0 20px rgba(36,126,255,.07); }
 .filter-icon-glyph {
-  font-size: 17px;
-  line-height: 1;
-  color: #a9d1f7;
-  text-shadow: 0 0 10px rgba(79,156,238,.25);
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  color: #9fd0ff;
 }
 
 .filter-panel {
@@ -426,6 +427,8 @@ button { -webkit-tap-highlight-color: transparent; }
     transform .82s cubic-bezier(.18,.86,.22,1);
   will-change: transform, opacity;
   backface-visibility: hidden;
+  contain: layout paint style;
+  transform-style: preserve-3d;
 }
 
 .flat-mode .flat-map-layer {
@@ -493,14 +496,18 @@ button { -webkit-tap-highlight-color: transparent; }
   stroke: rgba(174,210,235,.38);
   stroke-width: .65;
   vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 1.2px 0 rgba(133,196,244,.10)) drop-shadow(0 5px 9px rgba(0,0,0,.24));
+  filter: none;
+}
+
+.flat-countries {
+  filter: drop-shadow(0 5px 9px rgba(0,0,0,.22));
 }
 
 .flat-country.turkey {
   fill: url(#flatTurkey);
   stroke: rgba(255,139,158,.98);
   stroke-width: 1.35;
-  filter: drop-shadow(0 0 4px rgba(255,57,89,.82)) drop-shadow(0 0 12px rgba(255,36,74,.33));
+  filter: drop-shadow(0 0 5px rgba(255,57,89,.72));
 }
 
 .flat-route-glow,
@@ -514,7 +521,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .flat-route-glow {
   stroke: rgba(54,155,255,.22);
   stroke-width: 5.6;
-  filter: url(#flatRouteGlow);
+  filter: none;
 }
 
 .flat-route-base {
@@ -746,8 +753,10 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 650px) {
   .flat-map-layer { padding: 0; }
   .flat-map-frame { width: 100vw; height: 100vh; border-radius: 0; }
-  .flat-route-base { stroke-width: 1.2; }
-  .flat-route-base.hub { stroke-width: 1.5; }
+  .flat-route-base { stroke-width: 1.45; }
+  .flat-route-group.hub .flat-route-base { stroke-width: 1.8; }
+  .flat-route-packet { stroke-width: 2.5; }
+  .flat-route-group.hub .flat-route-packet { stroke-width: 2.9; }
 
   .filter-wrap { right: 12px; }
   .filter-panel { max-height: 70vh; overflow-y: auto; }
@@ -760,51 +769,6 @@ button { -webkit-tap-highlight-color: transparent; }
   .mode-switch { left: 64px; width: 42px; height: 42px; }
 }
 
-.flat-map-svg {
-  width: 100vw;
-  height: 100vh;
-  display: block;
-  filter: drop-shadow(0 0 24px rgba(45,128,214,.10));
-}
-
-.flat-map-frame::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
-    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: radial-gradient(circle at center, #000 0 55%, transparent 92%);
-  opacity: .24;
-}
-
-.flat-map-frame::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 45%, transparent 40%, rgba(0,0,0,.18) 74%, rgba(0,0,0,.48) 100%),
-    linear-gradient(180deg, rgba(79,149,231,.035), transparent 25%, transparent 76%, rgba(0,0,0,.18));
-}
-
-.flat-map-sheen {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(112deg, transparent 0 28%, rgba(95,184,255,.045) 42%, transparent 58%),
-    radial-gradient(circle at 50% 0%, rgba(81,170,255,.09), transparent 32%);
-  mix-blend-mode: screen;
-  animation: mapSheen 11s ease-in-out infinite alternate;
-}
-
-@keyframes mapSheen {
-  from { transform: translateX(-2%); opacity: .55; }
-  to { transform: translateX(2%); opacity: .9; }
-}
 
 .mode-switch-icon svg {
   width: 23px;
@@ -819,4 +783,15 @@ button { -webkit-tap-highlight-color: transparent; }
 .mode-switch.active .mode-switch-icon {
   transform: rotate(90deg) scale(.96);
   color: #b7dcff;
+}
+
+.filter-icon-glyph svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px rgba(72,159,255,.22));
 }
