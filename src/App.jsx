@@ -260,6 +260,7 @@ export default function App() {
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
   const [flowDensity, setFlowDensity] = useState(3);
+  const [globeMode, setGlobeMode] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -304,6 +305,17 @@ export default function App() {
     return [...unique.values()];
   }, [visibleNodes, labelScale]);
 
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+    globe.pointOfView?.(
+      globeMode
+        ? { lat: 20, lng: 28, altitude: 2.22 }
+        : { lat: 18, lng: 18, altitude: 1.67 },
+      900
+    );
+  }, [globeMode]);
+
   const onReady = () => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -339,11 +351,11 @@ export default function App() {
       controls.maxDistance = 430;
     }
 
-    globe.pointOfView?.({ lat: 18, lng: 18, altitude: 1.67 }, 0);
+    globe.pointOfView?.(globeMode ? { lat: 20, lng: 28, altitude: 2.22 } : { lat: 18, lng: 18, altitude: 1.67 }, 0);
   };
 
   return (
-    <main className="space-shell">
+    <main className={`space-shell ${globeMode ? 'globe-mode' : 'cinematic-mode'}`}>
       <SpaceBackdrop />
       <div className="globe-halo" />
       <div className="globe-host">
@@ -420,6 +432,19 @@ export default function App() {
           htmlTransitionDuration={0}
         />
       </div>
+
+      <button
+        className={`mode-switch ${globeMode ? 'active' : ''}`}
+        onClick={() => setGlobeMode((value) => !value)}
+        aria-pressed={globeMode}
+        title="Görünüm modunu değiştir"
+      >
+        <span className="mode-switch-icon">◉</span>
+        <span className="mode-switch-copy">
+          <b>MOD DEĞİŞTİR</b>
+          <small>{globeMode ? 'KÜRE MODU' : 'YAKIN MOD'}</small>
+        </span>
+      </button>
 
       <div className="corner-status"><span className="status-ring"><i /></span></div>
       <div className="coordinate-hud"><span className="crosshair">✦</span><span>39.9334° N&nbsp;&nbsp;32.8597° E</span></div>
