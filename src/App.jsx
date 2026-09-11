@@ -251,6 +251,141 @@ function buildRoutePath(arc) {
   return points;
 }
 
+
+function projectFlat(lat, lng) {
+  return {
+    x: ((lng + 180) / 360) * 1000,
+    y: ((90 - lat) / 180) * 500,
+  };
+}
+
+function ringToPath(ring = []) {
+  if (!ring.length) return '';
+  let d = '';
+  let lastX = null;
+  ring.forEach((coord, index) => {
+    const [lng, lat] = coord;
+    const { x, y } = projectFlat(lat, lng);
+    const jump = lastX !== null && Math.abs(x - lastX) > 520;
+    d += `${index === 0 || jump ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
+    lastX = x;
+  });
+  return d + 'Z';
+}
+
+function featureToPath(feature) {
+  const geometry = feature?.geometry;
+  if (!geometry) return '';
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates.map(ringToPath).join(' ');
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.flatMap((polygon) => polygon.map(ringToPath)).join(' ');
+  }
+  return '';
+}
+
+function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
+  const labels = useMemo(() => {
+    const unique = new Map();
+    nodes.filter((node) => node.label).forEach((node) => {
+      if (!unique.has(node.name)) unique.set(node.name, node);
+    });
+    return [...unique.values()];
+  }, [nodes]);
+
+  return (
+    <div className="flat-map-layer" aria-hidden="true">
+      <div className="flat-map-frame">
+        <svg className="flat-map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <filter id="flatGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2.2" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <linearGradient id="flatOcean" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#061225" />
+              <stop offset="55%" stopColor="#0a1d34" />
+              <stop offset="100%" stopColor="#06101f" />
+            </linearGradient>
+          </defs>
+
+          <rect x="0" y="0" width="1000" height="500" rx="18" fill="url(#flatOcean)" />
+
+          <g className="flat-graticule">
+            {[100,200,300,400,500,600,700,800,900].map((x) => <line key={`vx-${x}`} x1={x} y1="0" x2={x} y2="500" />)}
+            {[100,200,300,400].map((y) => <line key={`hy-${y}`} x1="0" y1={y} x2="1000" y2={y} />)}
+          </g>
+
+          <g className="flat-countries">
+            {geojson.features.map((feature, index) => (
+              <path
+                key={feature.id || feature.properties?.name || index}
+                d={featureToPath(feature)}
+                className={isTurkeyFeature(feature) ? 'flat-country turkey' : 'flat-country'}
+              />
+            ))}
+          </g>
+
+          <g className="flat-routes">
+            {arcs.map((arc, index) => {
+              const a = projectFlat(arc.from.lat, arc.from.lng);
+              const b = projectFlat(arc.to.lat, arc.to.lng);
+              const dx = Math.abs(b.x - a.x);
+              const bend = Math.max(18, Math.min(80, dx * 0.12));
+              const cx = (a.x + b.x) / 2;
+              const cy = Math.min(a.y, b.y) - bend;
+              const d = `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`;
+              return (
+                <g key={`route-${index}`}>
+                  <path d={d} pathLength="100" className={`flat-route-base ${arc.hub ? 'hub' : ''}`} />
+                  <path
+                    d={d}
+                    pathLength="100"
+                    className={`flat-route-packet ${arc.hub ? 'hub' : ''}`}
+                    style={{ animationDelay: `-${(index * 0.73).toFixed(2)}s` }}
+                  />
+                </g>
+              );
+            })}
+          </g>
+
+          <g className="flat-nodes">
+            {nodes.map((node, index) => {
+              const p = projectFlat(node.lat, node.lng);
+              const radius = (node.target ? 5.2 : node.hub ? 4.1 : 2.4) * nodeScale;
+              return (
+                <g key={`node-${index}`} className={node.target ? 'flat-node turkey' : node.hub ? 'flat-node hub' : 'flat-node'}>
+                  {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.3} className="flat-node-ring" />}
+                  <circle cx={p.x} cy={p.y} r={radius} className="flat-node-core" filter="url(#flatGlow)" />
+                </g>
+              );
+            })}
+          </g>
+
+          <g className="flat-labels">
+            {labels.map((node) => {
+              const p = projectFlat(node.lat, node.lng);
+              return (
+                <text
+                  key={node.name}
+                  x={p.x}
+                  y={p.y - (node.target ? 12 : 9)}
+                  className={node.target ? 'flat-label turkey' : node.hub ? 'flat-label hub' : 'flat-label'}
+                  style={{ fontSize: `${(node.target ? 11 : node.hub ? 8.5 : 7.5) * labelScale}px` }}
+                >
+                  {node.name}
+                </text>
+              );
+            })}
+          </g>
+        </svg>
+        <div className="flat-map-sheen" />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const globeRef = useRef();
   const { width, height } = useWindowSize();
@@ -260,7 +395,7 @@ export default function App() {
   const [labelScale, setLabelScale] = useState(1);
   const [nodeScale, setNodeScale] = useState(1);
   const [flowDensity, setFlowDensity] = useState(3);
-  const [globeMode, setGlobeMode] = useState(false);
+  const [flatMode, setGlobeMode] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -305,16 +440,6 @@ export default function App() {
     return [...unique.values()];
   }, [visibleNodes, labelScale]);
 
-  useEffect(() => {
-    const globe = globeRef.current;
-    if (!globe) return;
-    globe.pointOfView?.(
-      globeMode
-        ? { lat: 20, lng: 28, altitude: 2.22 }
-        : { lat: 18, lng: 18, altitude: 1.67 },
-      900
-    );
-  }, [globeMode]);
 
   const onReady = () => {
     const globe = globeRef.current;
@@ -351,11 +476,11 @@ export default function App() {
       controls.maxDistance = 430;
     }
 
-    globe.pointOfView?.(globeMode ? { lat: 20, lng: 28, altitude: 2.22 } : { lat: 18, lng: 18, altitude: 1.67 }, 0);
+    globe.pointOfView?.({ lat: 18, lng: 18, altitude: 1.67 }, 0);
   };
 
   return (
-    <main className={`space-shell ${globeMode ? 'globe-mode' : 'cinematic-mode'}`}>
+    <main className={`space-shell ${flatMode ? 'flat-mode' : 'globe-mode'}`}>
       <SpaceBackdrop />
       <div className="globe-halo" />
       <div className="globe-host">
@@ -433,16 +558,24 @@ export default function App() {
         />
       </div>
 
+      <FlatMap
+        geojson={geojson}
+        nodes={visibleNodes}
+        arcs={arcs}
+        labelScale={labelScale}
+        nodeScale={nodeScale}
+      />
+
       <button
-        className={`mode-switch ${globeMode ? 'active' : ''}`}
+        className={`mode-switch ${flatMode ? 'active' : ''}`}
         onClick={() => setGlobeMode((value) => !value)}
-        aria-pressed={globeMode}
+        aria-pressed={flatMode}
         title="Görünüm modunu değiştir"
       >
         <span className="mode-switch-icon">◉</span>
         <span className="mode-switch-copy">
           <b>MOD DEĞİŞTİR</b>
-          <small>{globeMode ? 'KÜRE MODU' : 'YAKIN MOD'}</small>
+          <small>{flatMode ? 'DÜZ HARİTA' : '3D KÜRE'}</small>
         </span>
       </button>
 
