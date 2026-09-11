@@ -344,6 +344,81 @@ button { -webkit-tap-highlight-color: transparent; }
 .legend-node.hub { background: #ffc85a; color: #ffc85a; }
 .legend-node.turkey { background: #ff3455; color: #ff3455; }
 
+.mode-switch {
+  position: absolute;
+  z-index: 32;
+  top: 22px;
+  left: 90px;
+  min-width: 154px;
+  height: 44px;
+  padding: 0 14px 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(112, 171, 225, .24);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(7,16,29,.90), rgba(2,8,16,.84));
+  color: #e9f6ff;
+  box-shadow: 0 14px 38px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter: blur(18px) saturate(125%);
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.mode-switch:hover {
+  transform: translateY(-1px);
+  border-color: rgba(78, 158, 238, .56);
+  box-shadow: 0 16px 42px rgba(0,0,0,.35), 0 0 20px rgba(46,132,255,.08);
+}
+
+.mode-switch.active {
+  border-color: rgba(91, 184, 255, .70);
+  background: linear-gradient(180deg, rgba(15,47,81,.92), rgba(4,20,37,.88));
+  box-shadow: 0 16px 44px rgba(0,0,0,.36), 0 0 24px rgba(61,157,255,.13);
+}
+
+.mode-switch-icon {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(116, 184, 247, .42);
+  color: #72b7ff;
+  box-shadow: inset 0 0 12px rgba(51,139,238,.11), 0 0 11px rgba(58,146,255,.10);
+  font-size: 12px;
+}
+
+.mode-switch-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+}
+
+.mode-switch-copy b {
+  font-size: 9px;
+  letter-spacing: .10em;
+  font-weight: 800;
+}
+
+.mode-switch-copy small {
+  margin-top: 4px;
+  color: #7e9bb7;
+  font-size: 7px;
+  letter-spacing: .09em;
+  font-weight: 700;
+}
+
+.globe-mode .globe-halo {
+  background: radial-gradient(circle at 50% 49%, rgba(61, 145, 255, .18) 0, rgba(39, 94, 179, .08) 25%, transparent 46%);
+}
+
+.globe-mode .coordinate-hud,
+.globe-mode .right-ticks {
+  opacity: .62;
+}
+
 .corner-status {
   position: absolute;
   z-index: 20;
@@ -441,6 +516,7 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 900px) {
   .filter-wrap { width: 270px; right: 14px; top: 14px; }
   .corner-status { top: 17px; left: 18px; }
+  .mode-switch { top: 16px; left: 72px; min-width: 142px; height: 42px; }
   .coordinate-hud { left: 18px; bottom: 18px; }
   .planet-left { width: 90px; height: 90px; }
   .const-name { display: none; }
@@ -455,4 +531,6 @@ button { -webkit-tap-highlight-color: transparent; }
   .planet { opacity: .40; }
   .coordinate-hud span:last-child { display: none; }
   .right-ticks { display: none; }
+  .mode-switch { left: 66px; min-width: 132px; padding-right: 10px; }
+  .mode-switch-copy small { display: none; }
 }
