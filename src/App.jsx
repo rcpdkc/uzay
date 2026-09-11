@@ -107,9 +107,15 @@ function FilterPanel({ open, setOpen, activeFilter, setActiveFilter, labelScale,
         className={`filter-button icon-only ${open ? 'active' : ''}`}
         onClick={() => setOpen((v) => !v)}
         aria-label="Filtreleri aç veya kapat"
-        title="Filtreler"
       >
-        <span className="filter-icon-glyph">⌘</span>
+        <span className="filter-icon-glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M5 6h14M8 12h8M10.5 18h3" />
+            <circle cx="8" cy="6" r="1.7" />
+            <circle cx="15.5" cy="12" r="1.7" />
+            <circle cx="12.5" cy="18" r="1.7" />
+          </svg>
+        </span>
       </button>
       {open && (
         <div className="filter-panel">
@@ -380,7 +386,13 @@ function FlatMap({ geojson, nodes, arcs, labelScale, nodeScale }) {
                 <g key={`node-${index}`} className={cls}>
                   {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 3.05} className="flat-node-aura" />}
                   {(node.target || node.hub) && <circle cx={p.x} cy={p.y} r={radius * 2.0} className="flat-node-ring" />}
-                  <circle cx={p.x} cy={p.y} r={radius} className="flat-node-core" filter="url(#flatNodeGlow)" />
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={radius}
+                    className="flat-node-core"
+                    filter={node.target || node.hub ? 'url(#flatNodeGlow)' : undefined}
+                  />
                 </g>
               );
             })}
