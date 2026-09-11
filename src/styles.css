@@ -444,7 +444,7 @@ button { -webkit-tap-highlight-color: transparent; }
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 48%, rgba(12,47,80,.32), transparent 39%),
+    radial-gradient(ellipse at 50% 47%, rgba(18,62,103,.28) 0%, rgba(5,22,39,.10) 43%, transparent 70%),
     linear-gradient(180deg, #01060f 0%, #03101d 50%, #01050d 100%);
 }
 
@@ -477,30 +477,32 @@ button { -webkit-tap-highlight-color: transparent; }
   height: 100%;
   display: block;
   shape-rendering: geometricPrecision;
+  overflow: visible;
 }
 
-.flat-world-halo {
-  fill: rgba(56,142,229,.025);
-  stroke: rgba(91,168,237,.08);
-  stroke-width: 1;
+.flat-world-depth {
+  opacity: .9;
 }
 
-.flat-graticule line {
-  stroke: rgba(111,167,217,.075);
-  stroke-width: .55;
+.flat-graticule path {
+  fill: none;
+  stroke: rgba(113,171,222,.075);
+  stroke-width: .58;
   vector-effect: non-scaling-stroke;
 }
 
 .flat-country {
   fill: url(#flatLand);
-  stroke: rgba(174,210,235,.38);
-  stroke-width: .65;
+  stroke: rgba(175,210,235,.42);
+  stroke-width: .72;
   vector-effect: non-scaling-stroke;
   filter: none;
 }
 
 .flat-countries {
-  filter: drop-shadow(0 5px 9px rgba(0,0,0,.22));
+  filter:
+    drop-shadow(0 1px 0 rgba(151,205,244,.10))
+    drop-shadow(0 7px 13px rgba(0,0,0,.30));
 }
 
 .flat-country.turkey {
@@ -520,23 +522,23 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .flat-route-glow {
   stroke: rgba(54,155,255,.22);
-  stroke-width: 5.6;
+  stroke-width: 4.8;
   filter: none;
 }
 
 .flat-route-base {
   stroke: rgba(83,181,255,.76);
-  stroke-width: 2.05;
+  stroke-width: 1.85;
 }
 
 .flat-route-group.hub .flat-route-glow {
   stroke: rgba(255,197,75,.22);
-  stroke-width: 6.4;
+  stroke-width: 5.5;
 }
 
 .flat-route-group.hub .flat-route-base {
   stroke: rgba(255,210,103,.82);
-  stroke-width: 2.55;
+  stroke-width: 2.25;
 }
 
 .flat-route-packet {
