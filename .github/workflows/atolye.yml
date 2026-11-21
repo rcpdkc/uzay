@@ -1,0 +1,30 @@
+# Atolye tarafindan olusturuldu. Istedigin gibi degistirebilirsin.
+name: GitHub Actions
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Node
+        run: |
+          if [ -f package.json ]; then (npm ci || npm install) && npm run build --if-present && npm test --if-present; fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi; if ls test_*.py tests 2>/dev/null | grep -q .; then pip install pytest && pytest; fi
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Go
+        run: |
+          if [ -f go.mod ]; then go build ./... && go test ./...; fi
